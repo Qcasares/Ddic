@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -16,7 +17,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function App() {
   const [selectedDictionary, setSelectedDictionary] = useState<string | null>(null);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -86,7 +87,25 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="ui-theme">
       <TooltipProvider>
-        <ErrorBoundary>
+        <ErrorBoundary
+          fallback={
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+              <div className="text-center space-y-4">
+                <DatabaseIcon className="h-12 w-12 mx-auto text-destructive" />
+                <h1 className="text-2xl font-bold">Application Error</h1>
+                <p className="text-muted-foreground">
+                  Something went wrong. Please try refreshing the page.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh Page
+                </Button>
+              </div>
+            </div>
+          }
+        >
           <div className="min-h-screen bg-background">
             <header className="border-b">
               <div className="container flex h-16 items-center px-4">

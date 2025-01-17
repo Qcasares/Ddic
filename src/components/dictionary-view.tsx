@@ -113,7 +113,7 @@ export function DictionaryView({ dictionaryId }: DictionaryViewProps) {
       </TabsContent>
 
       <TabsContent value="history">
-        <VersionHistory 
+        <VersionHistory
           dictionaryId={dictionaryId}
           selectedEntryId={selectedEntry}
         />

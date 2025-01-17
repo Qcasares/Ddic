@@ -5,6 +5,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
+import { Version } from '@/types';
+
+import { VersionHistoryProps } from '@/types';
+
 interface Version {
   id: string;
   entry_id: string;
@@ -12,10 +16,6 @@ interface Version {
   changes: Record<string, any>;
   created_at: string;
   created_by: string;
-}
-
-interface VersionHistoryProps {
-  dictionaryId: string;
 }
 
 function VersionSkeleton() {

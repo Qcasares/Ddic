@@ -43,8 +43,8 @@ function DictionaryCardSkeleton() {
 }
 
 export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListProps) {
-  const [editingDictionary, setEditingDictionary] = useState<any>(null);
-  const [deletingDictionary, setDeletingDictionary] = useState<any>(null);
+  const [editingDictionary, setEditingDictionary] = useState<Dictionary | null>(null);
+  const [deletingDictionary, setDeletingDictionary] = useState<Dictionary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { data: dictionaries, isLoading, error, refetch } = useDictionaries();
   const { toast } = useToast();
