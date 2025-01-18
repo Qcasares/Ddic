@@ -21,145 +21,136 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-        <TooltipProvider>
-          <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="text-center">
-              <DatabaseIcon className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p className="text-sm text-muted-foreground">Loading...</p>
-            </div>
-          </div>
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <DatabaseIcon className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
     );
   }
 
   // Handle auth callbacks
   const isAuthCallback = window.location.pathname.startsWith('/auth/');
   if (isAuthCallback) {
-    return (
-      <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-        <TooltipProvider>
-          <AuthCallbackHandler />
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
-    );
+    return <AuthCallbackHandler />;
   }
 
   if (!session) {
     return (
-      <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-        <TooltipProvider>
-          <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <LoginForm />
-          </div>
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <LoginForm />
+      </div>
     );
   }
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-      <TooltipProvider>
-        <ErrorBoundary
-          fallback={
-            <div className="min-h-screen bg-background flex items-center justify-center p-4">
-              <div className="text-center space-y-4">
-                <DatabaseIcon className="h-12 w-12 mx-auto text-destructive" />
-                <h1 className="text-2xl font-bold">Application Error</h1>
-                <p className="text-muted-foreground">
-                  Something went wrong. Please try refreshing the page.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.reload()}
-                >
-                  Refresh Page
-                </Button>
-              </div>
-            </div>
-          }
-        >
-          <div className="min-h-screen bg-background">
-            <header className="border-b">
-              <div className="container flex h-16 items-center px-4">
-                <div className="flex items-center gap-2">
-                  <DatabaseIcon className="h-6 w-6" />
-                  <h1 className="text-xl font-semibold">Data Dictionary Manager</h1>
-                </div>
-                <div className="ml-auto flex items-center space-x-2">
-                  <ThemeToggle />
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Settings className="h-5 w-5" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={handleSignOut}
-                    className="h-9 w-9"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </header>
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="container flex h-16 items-center px-4">
+          <div className="flex items-center gap-2">
+            <DatabaseIcon className="h-6 w-6" />
+            <h1 className="text-xl font-semibold">Data Dictionary Manager</h1>
+          </div>
+          <div className="ml-auto flex items-center space-x-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Settings className="h-5 w-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={signOut}
+              className="h-9 w-9"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
-            <main className="container mx-auto py-6 px-4">
-              <Tabs defaultValue="dictionaries" className="space-y-6">
-                <TabsList className="w-full justify-start border-b pb-px">
-                  <TabsTrigger value="dictionaries" className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Dictionaries
-                  </TabsTrigger>
-                  <TabsTrigger value="profile" className="flex items-center gap-2">
-                    <UserCircle className="h-4 w-4" />
-                    Profile
-                  </TabsTrigger>
-                  <TabsTrigger value="performance" className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    Performance
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="dictionaries">
-                  <div className="grid lg:grid-cols-12 gap-6">
-                    <div className="lg:col-span-3">
-                      <DictionaryList
-                        selectedDictionary={selectedDictionary}
-                        onSelect={setSelectedDictionary}
-                      />
-                    </div>
-                    <div className="lg:col-span-9">
-                      {selectedDictionary ? (
-                        <DictionaryView dictionaryId={selectedDictionary} />
-                      ) : (
-                        <div className="flex h-[600px] items-center justify-center border rounded-lg bg-muted/50">
-                          <div className="text-center">
-                            <BookOpen className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-                            <h3 className="text-lg font-medium">No dictionary selected</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Select a dictionary from the list or create a new one
-                            </p>
-                          </div>
-                        </div>
-                      )}
+      <main className="container mx-auto py-6 px-4">
+        <Tabs defaultValue="dictionaries" className="space-y-6">
+          <TabsList className="w-full justify-start border-b pb-px">
+            <TabsTrigger value="dictionaries" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Dictionaries
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <UserCircle className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Performance
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="dictionaries">
+            <div className="grid lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-3">
+                <DictionaryList
+                  selectedDictionary={selectedDictionary}
+                  onSelect={setSelectedDictionary}
+                />
+              </div>
+              <div className="lg:col-span-9">
+                {selectedDictionary ? (
+                  <DictionaryView dictionaryId={selectedDictionary} />
+                ) : (
+                  <div className="flex h-[600px] items-center justify-center border rounded-lg bg-muted/50">
+                    <div className="text-center">
+                      <BookOpen className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-medium">No dictionary selected</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Select a dictionary from the list or create a new one
+                      </p>
                     </div>
                   </div>
-                </TabsContent>
-                <TabsContent value="profile">
-                  <ProfileView />
-                </TabsContent>
-                <TabsContent value="performance">
-                  <PerformanceDashboard />
-                </TabsContent>
-              </Tabs>
-            </main>
-          </div>
-          <Toaster />
-        </ErrorBoundary>
-      </TooltipProvider>
-    </ThemeProvider>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="profile">
+            <ProfileView />
+          </TabsContent>
+          <TabsContent value="performance">
+            <PerformanceDashboard />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <ThemeProvider defaultTheme="system" storageKey="ui-theme">
+        <TooltipProvider>
+          <ErrorBoundary
+            fallback={
+              <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="text-center space-y-4">
+                  <DatabaseIcon className="h-12 w-12 mx-auto text-destructive" />
+                  <h1 className="text-2xl font-bold">Application Error</h1>
+                  <p className="text-muted-foreground">
+                    Something went wrong. Please try refreshing the page.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                  >
+                    Refresh Page
+                  </Button>
+                </div>
+              </div>
+            }
+          >
+            <AppContent />
+            <Toaster />
+          </ErrorBoundary>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
