@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Dictionary } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { withErrorHandling, AppError, ErrorType } from '@/lib/error-handler';
+import { AppError } from '@/lib/error-handler';
 import { z } from 'zod';
 
 const dictionarySchema = z.object({
@@ -32,7 +33,7 @@ const dictionarySchema = z.object({
 });
 
 interface CreateDictionaryDialogProps {
-  onSuccess?: () => void;
+  onSuccess?: (newDictionary: Dictionary) => void;
 }
 
 export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProps) {
@@ -65,7 +66,8 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
       setIsLoading(true);
 
       try {
-        const { data: { user } } = await api.auth.getUser();
+        const { data: authData } = await api.auth.getUser();
+        const user = authData?.user;
         if (!user) {
           setErrors({ submit: 'Not authenticated' });
           return;
@@ -98,8 +100,6 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
           is_archived: false
         });
 
-        if (error) throw error;
-
         if (error) {
           setErrors({ submit: 'Failed to create dictionary' });
           return;
@@ -112,7 +112,7 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
 
         setOpen(false);
         resetForm();
-        onSuccess?.();
+        onSuccess?.(data);
       } catch (error) {
         if (error instanceof AppError) {
           setErrors({ submit: error.message });

@@ -12,6 +12,26 @@ interface ApiResponse<T> {
 }
 
 export const api = {
+  auth: {
+    getSession: async (): Promise<ApiResponse<{ user: any }>> => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        return { data: { user: data.session?.user }, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+    getUser: async (): Promise<ApiResponse<{ user: any }>> => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    }
+  },
   dictionaries: {
     list: async (): Promise<ApiResponse<Dictionary[]>> => {
       try {

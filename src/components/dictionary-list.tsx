@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '@/lib/api';
 import { Dictionary } from '@/types';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { CreateDictionaryDialog } from './create-dictionary-dialog';
 import { EditDictionaryDialog } from './edit-dictionary-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDictionaries } from '@/hooks/use-dictionaries';
 import { SyncIndicator } from './sync-indicator';
 import {
   DropdownMenu,
@@ -49,24 +49,25 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
   const [isDeleting, setIsDeleting] = useState(false);
   const [dictionaries, setDictionaries] = useState<Dictionary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string } | null>(null);
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await api.dictionaries.list();
+    
+    if (error) {
+      setError({ message: error.message });
+    } else if (data) {
+      setDictionaries(data);
+    }
+    
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    const fetchDictionaries = async () => {
-      setLoading(true);
-      const { data, error } = await api.dictionaries.list();
-      
-      if (error) {
-        setError(error.message);
-      } else if (data) {
-        setDictionaries(data);
-      }
-      
-      setLoading(false);
-    };
+    refetch();
+  }, [refetch]);
 
-    fetchDictionaries();
-  }, []);
   const { toast } = useToast();
 
   const handleDelete = useCallback(async () => {
@@ -114,7 +115,7 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
     );
   }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full rounded-md" />
@@ -130,7 +131,9 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
   if (!dictionaries || dictionaries.length === 0) {
     return (
       <div className="space-y-4">
-        <CreateDictionaryDialog onSuccess={refetch} />
+        <CreateDictionaryDialog onSuccess={(newDictionary: Dictionary) => {
+          setDictionaries((prev) => [newDictionary, ...prev]);
+        }} />
         <div className="flex h-[600px] items-center justify-center border rounded-lg bg-muted/50">
           <div className="text-center">
             <Plus className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
@@ -147,7 +150,9 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <CreateDictionaryDialog onSuccess={refetch} />
+        <CreateDictionaryDialog onSuccess={(newDictionary: Dictionary) => {
+          setDictionaries((prev) => [newDictionary, ...prev]);
+        }} />
         <SyncIndicator
           isSyncing={false}
           isOnline={true}
