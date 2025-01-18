@@ -1,11 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
-import { CreateEntryDialog } from './create-entry-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SearchDialog } from './search-dialog';
-import { useDebounce } from '@/hooks/use-debounce';
 import { DataLineage } from './data-lineage';
 import { QualityDashboard } from './quality-dashboard';
 import { AnalyticsDashboard } from './analytics-dashboard';

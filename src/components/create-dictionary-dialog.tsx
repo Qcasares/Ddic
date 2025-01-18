@@ -33,7 +33,7 @@ const dictionarySchema = z.object({
 });
 
 interface CreateDictionaryDialogProps {
-  onSuccess?: (newDictionary: Dictionary) => void;
+  onSuccess?: (newDictionary: Dictionary | null) => void;
 }
 
 export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProps) {
@@ -90,7 +90,7 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
           return;
         }
 
-        const { data, error } = await api.dictionaries.create({
+        const { data: newDictionary, error } = await api.dictionaries.create({
           name: validatedData.name,
           description: validatedData.description || '',
           created_by: user.id,
@@ -112,7 +112,9 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
 
         setOpen(false);
         resetForm();
-        onSuccess?.(data);
+        if (newDictionary) {
+          onSuccess?.(newDictionary);
+        }
       } catch (error) {
         if (error instanceof AppError) {
           setErrors({ submit: error.message });
