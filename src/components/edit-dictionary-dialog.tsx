@@ -77,6 +77,7 @@ export function EditDictionaryDialog({ dictionary, onClose, onSuccess }: EditDic
           name: validatedData.name,
           description: validatedData.description || '',
           domain: validatedData.domain,
+          updated_at: new Date().toISOString()
         })
         .eq('id', dictionary.id);
 

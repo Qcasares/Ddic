@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { withErrorHandling, AppError, ErrorType } from '@/lib/error-handler';
 import { z } from 'zod';
@@ -65,35 +65,40 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
       setIsLoading(true);
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await api.auth.getUser();
         if (!user) {
           setErrors({ submit: 'Not authenticated' });
           return;
         }
 
         // Check if dictionary with same name exists
-        const { data: existingDicts, error: checkError } = await supabase
-          .from('dictionaries')
-          .select('id')
-          .ilike('name', validatedData.name);
-
+        const { data: existingDicts, error: checkError } = await api.dictionaries.list();
+        
         if (checkError) {
           setErrors({ submit: 'Failed to check dictionary name' });
           return;
         }
-        
-        if (existingDicts && existingDicts.length > 0) {
+
+        const exists = existingDicts?.some(
+          (dict) => dict.name.toLowerCase() === validatedData.name.toLowerCase()
+        );
+
+        if (exists) {
           setErrors({ name: 'A dictionary with this name already exists' });
           return;
         }
 
-        const { error } = await supabase.from('dictionaries').insert([{
+        const { data, error } = await api.dictionaries.create({
           name: validatedData.name,
           description: validatedData.description || '',
-          domain: validatedData.domain,
           created_by: user.id,
-          status: 'draft',
-        }]);
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          version: 1,
+          is_archived: false
+        });
+
+        if (error) throw error;
 
         if (error) {
           setErrors({ submit: 'Failed to create dictionary' });

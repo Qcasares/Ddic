@@ -1,122 +1,76 @@
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+import { Dictionary, Version } from '@/types';
 
-// Export/Import
-export async function exportDictionary(dictionaryId: string, format: 'json' | 'csv' = 'json') {
-  const { data: entries, error } = await supabase
-    .from('dictionary_entries')
-    .select('*')
-    .eq('dictionary_id', dictionaryId);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_KEY!
+);
 
-  if (error) throw error;
-
-  if (format === 'csv') {
-    const headers = Object.keys(entries[0] || {}).join(',');
-    const rows = entries.map(entry => 
-      Object.values(entry).map(value => 
-        typeof value === 'object' ? JSON.stringify(value) : value
-      ).join(',')
-    );
-    return `${headers}\n${rows.join('\n')}`;
-  }
-
-  return JSON.stringify(entries, null, 2);
+interface ApiResponse<T> {
+  data: T | null;
+  error: Error | null;
 }
 
-export async function importDictionary(dictionaryId: string, data: any[]) {
-  const { error } = await supabase
-    .from('dictionary_entries')
-    .insert(data.map(entry => ({
-      ...entry,
-      dictionary_id: dictionaryId
-    })));
+export const api = {
+  dictionaries: {
+    list: async (): Promise<ApiResponse<Dictionary[]>> => {
+      try {
+        const { data, error } = await supabase
+          .from('dictionaries')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  if (error) throw error;
-}
-
-// Search and Filter
-export async function searchEntries(dictionaryId: string, query: string) {
-  const { data, error } = await supabase
-    .from('dictionary_entries')
-    .select('*')
-    .eq('dictionary_id', dictionaryId)
-    .textSearch('search_vector', query);
-
-  if (error) throw error;
-  return data;
-}
-
-// Data Quality
-export function calculateQualityScore(entry: any) {
-  let score = 0;
-  const checks = [
-    { weight: 0.3, check: () => !!entry.description },
-    { weight: 0.2, check: () => entry.sample_values?.length > 0 },
-    { weight: 0.2, check: () => Object.keys(entry.metadata || {}).length > 0 },
-    { weight: 0.3, check: () => entry.validation_rules && Object.keys(entry.validation_rules).length > 0 }
-  ];
-
-  return checks.reduce((total, { weight, check }) => 
-    total + (check() ? weight : 0), 0) * 100;
-}
-
-// Analytics
-export async function getActivityMetrics(dictionaryId: string) {
-  const { data: entries, error: entriesError } = await supabase
-    .from('dictionary_entries')
-    .select('created_at, updated_at')
-    .eq('dictionary_id', dictionaryId);
-
-  if (entriesError) throw entriesError;
-
-  const { data: versions, error: versionsError } = await supabase
-    .from('entry_versions')
-    .select('created_at')
-    .eq('dictionary_id', dictionaryId);
-
-  if (versionsError) throw versionsError;
-
-  return {
-    totalEntries: entries.length,
-    totalChanges: versions.length,
-    lastUpdated: entries.reduce((latest, entry) => 
-      Math.max(latest, new Date(entry.updated_at).getTime()), 0),
-    changeFrequency: versions.length / (entries.length || 1)
-  };
-}
-
-// Validation
-export function validateEntry(entry: any, rules: any) {
-  const validations = {
-    required: (value: any) => value !== undefined && value !== null && value !== '',
-    minLength: (value: string, min: number) => value.length >= min,
-    maxLength: (value: string, max: number) => value.length <= max,
-    pattern: (value: string, pattern: string) => new RegExp(pattern).test(value),
-    enum: (value: any, allowed: any[]) => allowed.includes(value),
-    type: (value: any, type: string) => typeof value === type
-  };
-
-  const errors: Record<string, string[]> = {};
-
-  Object.entries(rules).forEach(([field, fieldRules]: [string, any]) => {
-    const value = entry[field];
-    const fieldErrors: string[] = [];
-
-    Object.entries(fieldRules).forEach(([rule, param]) => {
-      if (validations[rule as keyof typeof validations]) {
-        const isValid = validations[rule as keyof typeof validations](value, param);
-        if (!isValid) {
-          fieldErrors.push(`Failed ${rule} validation`);
-        }
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
       }
-    });
+    },
 
-    if (fieldErrors.length > 0) {
-      errors[field] = fieldErrors;
+    create: async (dictionary: Omit<Dictionary, 'id'>): Promise<ApiResponse<Dictionary>> => {
+      try {
+        const { data, error } = await supabase
+          .from('dictionaries')
+          .insert(dictionary)
+          .single();
+
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    update: async (id: string, updates: Partial<Dictionary>): Promise<ApiResponse<Dictionary>> => {
+      try {
+        const { data, error } = await supabase
+          .from('dictionaries')
+          .update(updates)
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
     }
-  });
+  },
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
-}
+  versions: {
+    list: async (dictionaryId: string): Promise<ApiResponse<Version[]>> => {
+      try {
+        const { data, error } = await supabase
+          .from('versions')
+          .select('*')
+          .eq('dictionary_id', dictionaryId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    }
+  }
+};

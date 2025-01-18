@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
+import { usePerformanceMonitor } from '@/lib/performance-monitor';
 import { Button } from '@/components/ui/button';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { DatabaseIcon, BookOpen, Settings, LogOut, UserCircle } from 'lucide-react';
+import { DatabaseIcon, BookOpen, Settings, LogOut, UserCircle, Activity } from 'lucide-react';
 import { DictionaryList } from '@/components/dictionary-list';
+import { PerformanceDashboard } from '@/components/performance-dashboard';
 import { DictionaryView } from '@/components/dictionary-view';
 import { ProfileView } from '@/components/profile-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +22,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const performanceMetrics = usePerformanceMonitor();
 
   useEffect(() => {
     // Check for initial session
@@ -141,6 +144,10 @@ export default function App() {
                     <UserCircle className="h-4 w-4" />
                     Profile
                   </TabsTrigger>
+                  <TabsTrigger value="performance" className="flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Performance
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="dictionaries">
                   <div className="grid lg:grid-cols-12 gap-6">
@@ -169,6 +176,9 @@ export default function App() {
                 </TabsContent>
                 <TabsContent value="profile">
                   <ProfileView />
+                </TabsContent>
+                <TabsContent value="performance">
+                  <PerformanceDashboard />
                 </TabsContent>
               </Tabs>
             </main>

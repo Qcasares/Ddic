@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Dictionary } from '@/types';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -46,7 +47,26 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
   const [editingDictionary, setEditingDictionary] = useState<Dictionary | null>(null);
   const [deletingDictionary, setDeletingDictionary] = useState<Dictionary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const { data: dictionaries, isLoading, error, refetch } = useDictionaries();
+  const [dictionaries, setDictionaries] = useState<Dictionary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDictionaries = async () => {
+      setLoading(true);
+      const { data, error } = await api.dictionaries.list();
+      
+      if (error) {
+        setError(error.message);
+      } else if (data) {
+        setDictionaries(data);
+      }
+      
+      setLoading(false);
+    };
+
+    fetchDictionaries();
+  }, []);
   const { toast } = useToast();
 
   const handleDelete = useCallback(async () => {

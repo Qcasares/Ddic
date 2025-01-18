@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { Version } from '@/types';
+import { Version as VersionType } from '@/types';
 
 import { VersionHistoryProps } from '@/types';
 
