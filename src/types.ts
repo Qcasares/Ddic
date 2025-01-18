@@ -6,6 +6,9 @@ export interface Dictionary {
     created_at: string;
     updated_at: string;
     is_public: boolean;
+    version?: number;  // Added optional version property
+    is_archived?: boolean;  // Also added optional is_archived property
+    domain?: string;  // Added optional domain property based on form data
 }
 
 export interface DictionaryEntry {
@@ -19,6 +22,7 @@ export interface DictionaryEntry {
     related_terms?: string[];
     created_at: string;
     updated_at: string;
+    field_name?: string;
     [key: string]: any;
 }
 
@@ -26,9 +30,15 @@ export interface Version {
     id: string;
     dictionary_id: string;
     version_number: number;
-    changes: string;
+    version: number;
+    changes: Record<string, any>;
     created_at: string;
     created_by: string;
+    dictionary_entries: DictionaryEntry[];
+}
+
+export interface VersionHistoryProps {
+    dictionaryId: string;
 }
 
 export interface AnalyticsMetrics {
@@ -95,4 +105,54 @@ export interface QualityMetrics {
     averageScore: number;
     qualityTrend: Array<{ date: string; score: number }>;
     commonIssues: Array<{ rule: string; count: number }>;
+}
+
+// Document Processing Types
+export interface ProcessedDocument {
+    id: string;
+    originalName: string;
+    mimeType: string;
+    content: string;
+    metadata: DocumentMetadata;
+    created_at: string;
+    processed_at: string;
+}
+
+export interface DocumentMetadata {
+    fileSize: number;
+    pageCount?: number;
+    author?: string;
+    creationDate?: string;
+    lastModified?: string;
+    format: string;
+}
+
+export interface ExtractedTerm {
+    term: string;
+    context: string;
+    confidence: number;
+    frequency: number;
+    position: number[];
+    type: 'technical' | 'business' | 'general';
+    related_terms?: string[];
+}
+
+export interface ProcessingResult {
+    documentId: string;
+    extractedTerms: ExtractedTerm[];
+    processingMetrics: {
+        processingTime: number;
+        termsFound: number;
+        confidence: number;
+    };
+    status: 'completed' | 'failed' | 'partial';
+    errors?: string[];
+}
+
+export interface ProcessingOptions {
+    extractionMethod: 'statistical' | 'ml' | 'hybrid';
+    minConfidence: number;
+    maxTerms?: number;
+    includeDomainSpecific: boolean;
+    languages?: string[];
 }

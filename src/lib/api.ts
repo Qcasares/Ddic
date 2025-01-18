@@ -1,26 +1,14 @@
 import { 
   Dictionary, 
-  Version, 
   DictionaryEntry, 
-  AnalyticsMetrics,
-  DatabaseQualityRule,
-  DatabaseQualityScore,
-  QualityTrendData,
-  QualityMetrics
+  AnalyticsMetrics
 } from '@/types';
 import { supabase } from './supabase';
 import {
-  QualityRule,
-  QualityScore,
-  qualityRuleEngine,
-  RuleConfiguration,
-  RegexRuleConfiguration,
-  RequiredFieldConfiguration,
-  LengthRuleConfiguration,
-  FormatRuleConfiguration
+  qualityRuleEngine
 } from './quality-management';
 
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
   data: T | null;
   error: Error | null;
 }
@@ -76,21 +64,6 @@ export const api = {
       }
     },
 
-    update: async (id: string, updates: Partial<Dictionary>): Promise<ApiResponse<Dictionary>> => {
-      try {
-        const { data, error } = await supabase
-          .from('dictionaries')
-          .update(updates)
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-        return { data, error: null };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    },
-
     import: async (dictionaryId: string, data: any[]): Promise<ApiResponse<void>> => {
       try {
         const { error } = await supabase
@@ -134,23 +107,6 @@ export const api = {
           
           return { data: `${headers}\n${rows}`, error: null };
         }
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    }
-  },
-
-  versions: {
-    list: async (dictionaryId: string): Promise<ApiResponse<Version[]>> => {
-      try {
-        const { data, error } = await supabase
-          .from('versions')
-          .select('*')
-          .eq('dictionary_id', dictionaryId)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        return { data, error: null };
       } catch (error) {
         return { data: null, error: error as Error };
       }
@@ -241,291 +197,12 @@ export const api = {
     calculateQualityScore: async (entry: DictionaryEntry): Promise<number> => {
       const score = await qualityRuleEngine.evaluateEntry(entry);
       return score.totalScore;
-    },
-
-    getRules: async (dictionaryId: string): Promise<ApiResponse<QualityRule[]>> => {
-      try {
-        const { data, error } = await supabase
-          .from('quality_rules')
-          .select('*')
-          .eq('dictionary_id', dictionaryId);
-
-        if (error) throw error;
-
-        const rules = data as DatabaseQualityRule[];
-        return {
-          data: rules.map(rule => {
-            const qualityRule: QualityRule = {
-              id: rule.id,
-              dictionaryId: rule.dictionary_id,
-              name: rule.name,
-              ruleType: rule.rule_type,
-              configuration: rule.configuration,
-              severity: rule.severity,
-              createdAt: rule.created_at,
-              createdBy: rule.created_by,
-              updatedAt: rule.updated_at
-            };
-            return qualityRule;
-          }),
-          error: null
-        };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    },
-
-    createRule: async (rule: Omit<QualityRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<QualityRule>> => {
-      const getConfigurationForType = (config: RuleConfiguration): DatabaseQualityRule['configuration'] => {
-        const baseConfig = { field: config.field };
-        
-        if (isRegexConfig(config)) {
-          return {
-            ...baseConfig,
-            pattern: config.pattern,
-            flags: config.flags
-          };
-        }
-        
-        if (isRequiredFieldConfig(config)) {
-          return {
-            ...baseConfig,
-            allowEmpty: config.allowEmpty
-          };
-        }
-        
-        if (isLengthConfig(config)) {
-          return {
-            ...baseConfig,
-            minLength: config.minLength,
-            maxLength: config.maxLength
-          };
-        }
-        
-        if (isFormatConfig(config)) {
-          return {
-            ...baseConfig,
-            format: config.format
-          };
-        }
-        
-        return baseConfig;
-      };
-
-      try {
-        const { data, error } = await supabase
-          .from('quality_rules')
-          .insert({
-            dictionary_id: rule.dictionaryId,
-            name: rule.name,
-            rule_type: rule.ruleType,
-            configuration: {
-              field: rule.configuration.field,
-              ...(rule.ruleType === 'regex' && {
-                pattern: rule.configuration.pattern,
-                flags: rule.configuration.flags
-              }),
-              ...(rule.ruleType === 'required_field' && {
-                allowEmpty: rule.configuration.allowEmpty
-              }),
-              ...(rule.ruleType === 'length' && {
-                minLength: rule.configuration.minLength,
-                maxLength: rule.configuration.maxLength
-              }),
-              ...(rule.ruleType === 'format' && {
-                format: rule.configuration.format
-              })
-            },
-            severity: rule.severity,
-            created_by: rule.createdBy
-          } as DatabaseQualityRule)
-          .single();
-
-        if (error) throw error;
-
-        const dbRule = data as DatabaseQualityRule;
-        return {
-          data: {
-            id: dbRule.id,
-            dictionaryId: dbRule.dictionary_id,
-            name: dbRule.name,
-            ruleType: dbRule.rule_type,
-            configuration: dbRule.configuration,
-            severity: dbRule.severity,
-            createdAt: dbRule.created_at,
-            createdBy: dbRule.created_by,
-            updatedAt: dbRule.updated_at
-          },
-          error: null
-        };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    },
-
-    updateRule: async (id: string, updates: Partial<Omit<QualityRule, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ApiResponse<QualityRule>> => {
-      try {
-        const { data, error } = await supabase
-          .from('quality_rules')
-          .update({
-            name: updates.name,
-            rule_type: updates.ruleType,
-            configuration: updates.configuration,
-            severity: updates.severity
-          })
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-
-        const dbRule = data as DatabaseQualityRule;
-        return {
-          data: {
-            id: dbRule.id,
-            dictionaryId: dbRule.dictionary_id,
-            name: dbRule.name,
-            ruleType: dbRule.rule_type,
-            configuration: dbRule.configuration,
-            severity: dbRule.severity,
-            createdAt: dbRule.created_at,
-            createdBy: dbRule.created_by,
-            updatedAt: dbRule.updated_at
-          },
-          error: null
-        };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    },
-
-    deleteRule: async (id: string): Promise<ApiResponse<void>> => {
-      try {
-        const { error } = await supabase
-          .from('quality_rules')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-        return { data: null, error: null };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    },
-
-    evaluateEntry: async (entryId: string): Promise<ApiResponse<QualityScore>> => {
-      try {
-        const { data: entry, error: entryError } = await supabase
-          .from('dictionary_entries')
-          .select('*, dictionaries!inner(*)')
-          .eq('id', entryId)
-          .single();
-
-        if (entryError) throw entryError;
-
-        await qualityRuleEngine.loadRules(entry.dictionary_id);
-        const score = await qualityRuleEngine.evaluateEntry(entry);
-
-        return { data: score, error: null };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    },
-
-    getDictionaryQuality: async (dictionaryId: string): Promise<ApiResponse<QualityMetrics>> => {
-      try {
-        const { data: entries, error: entriesError } = await supabase
-          .from('dictionary_entries')
-          .select('id')
-          .eq('dictionary_id', dictionaryId);
-
-        if (entriesError) throw entriesError;
-
-        const entryIds = entries.map(e => e.id);
-
-        const { data: scores, error: scoresError } = await supabase
-          .from('quality_scores')
-          .select('*')
-          .in('entry_id', entryIds)
-          .order('created_at', { ascending: false });
-
-        if (scoresError) throw scoresError;
-
-        const dbScores = scores as DatabaseQualityScore[];
-
-        const averageScore = dbScores.length > 0
-          ? dbScores.reduce((sum, score) => sum + score.total_score, 0) / dbScores.length
-          : 0;
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const qualityTrend = dbScores
-          .filter(score => new Date(score.created_at) >= thirtyDaysAgo)
-          .reduce((acc, score) => {
-            const date = score.created_at.split('T')[0];
-            if (!acc[date]) {
-              acc[date] = { sum: 0, count: 0 };
-            }
-            acc[date].sum += score.total_score;
-            acc[date].count++;
-            return acc;
-          }, {} as Record<string, QualityTrendData>);
-
-        const issueCount: Record<string, number> = {};
-        dbScores.forEach(score => {
-          score.failed_rules.forEach(rule => {
-            issueCount[rule.ruleId] = (issueCount[rule.ruleId] || 0) + 1;
-          });
-        });
-
-        const ruleIds = Object.keys(issueCount);
-        const { data: rules, error: rulesError } = await supabase
-          .from('quality_rules')
-          .select('id, name')
-          .in('id', ruleIds);
-
-        if (rulesError) throw rulesError;
-
-        const dbRules = rules as DatabaseQualityRule[];
-        const ruleNames = Object.fromEntries(
-          dbRules.map(rule => [rule.id, rule.name])
-        );
-
-        return {
-          data: {
-            averageScore,
-            qualityTrend: Object.entries(qualityTrend).map(([date, { sum, count }]) => ({
-              date,
-              score: sum / count
-            })).sort((a, b) => a.date.localeCompare(b.date)),
-            commonIssues: Object.entries(issueCount)
-              .map(([ruleId, count]) => ({
-                rule: ruleNames[ruleId] || 'Unknown Rule',
-                count
-              }))
-              .sort((a, b) => b.count - a.count)
-          },
-          error: null
-        };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
     }
   }
 };
 
-export async function calculateQualityScore(entry: DictionaryEntry): Promise<number> {
-  return api.quality.calculateQualityScore(entry);
-}
-
-export async function getActivityMetrics(dictionaryId: string) {
-  return api.analytics.getActivityMetrics(dictionaryId);
-}
-
-export async function importDictionary(dictionaryId: string, data: any[]) {
-  return api.dictionaries.import(dictionaryId, data);
-}
-
-export async function exportDictionary(dictionaryId: string, format: 'json' | 'csv'): Promise<ApiResponse<string>> {
-  return api.dictionaries.export(dictionaryId, format);
-}
+// Exported functions for direct use
+export const getActivityMetrics = api.analytics.getActivityMetrics;
+export const calculateQualityScore = api.quality.calculateQualityScore;
+export const importDictionary = api.dictionaries.import;
+export const exportDictionary = api.dictionaries.export;

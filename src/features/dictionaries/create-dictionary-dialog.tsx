@@ -97,7 +97,9 @@ export function CreateDictionaryDialog({ onSuccess }: CreateDictionaryDialogProp
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           version: 1,
-          is_archived: false
+          is_archived: false,
+          is_public: false,  // Added is_public property
+          domain: validatedData.domain  // Added domain property
         });
 
         if (error) {
