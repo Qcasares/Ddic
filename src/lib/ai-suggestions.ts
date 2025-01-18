@@ -1,4 +1,3 @@
-import { supabase } from './supabase';
 import { OpenAIApi } from 'openai';
 
 export interface FieldSuggestion {

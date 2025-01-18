@@ -1,7 +1,7 @@
 import { useDictionaryEntries } from '@/hooks/use-dictionary-entries';
 import { generateFieldSuggestions, FieldSuggestion } from '@/lib/ai-suggestions';
 import { useState } from 'react';
-import type { DictionaryEntry } from '@/types/dictionary';
+import type { DictionaryEntry } from '@/types';
 
 export function AISuggestions({ dictionaryId }: { dictionaryId: string }) {
   const { data } = useDictionaryEntries({
@@ -15,7 +15,10 @@ export function AISuggestions({ dictionaryId }: { dictionaryId: string }) {
   const [suggestions, setSuggestions] = useState<FieldSuggestion[]>([]);
 
   const handleGenerateSuggestions = async () => {
-    const existingFields = data?.entries.map((entry: DictionaryEntry) => entry.name) || [];
+    const existingFields: string[] = data?.entries
+      .map(entry => ('name' in entry ? entry.name : ''))
+      .filter((name): name is string => typeof name === 'string' && name.length > 0) || [];
+      
     const newSuggestions = await generateFieldSuggestions(
       { id: dictionaryId, name: 'Dictionary' },
       existingFields
