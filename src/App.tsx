@@ -19,6 +19,16 @@ function AppContent() {
   const [selectedDictionary, setSelectedDictionary] = useState<string | null>(null);
   const { session, loading: isLoading, signOut } = useAuth();
 
+  // Handle auth callbacks before checking loading state
+  const isAuthCallback = window.location.pathname.startsWith('/auth/callback') || 
+                        window.location.pathname.startsWith('/auth/reset-password') ||
+                        new URLSearchParams(window.location.search).has('code') ||
+                        window.location.hash.includes('access_token');
+                        
+  if (isAuthCallback) {
+    return <AuthCallbackHandler />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -28,12 +38,6 @@ function AppContent() {
         </div>
       </div>
     );
-  }
-
-  // Handle auth callbacks
-  const isAuthCallback = window.location.pathname.startsWith('/auth/');
-  if (isAuthCallback) {
-    return <AuthCallbackHandler />;
   }
 
   if (!session) {
