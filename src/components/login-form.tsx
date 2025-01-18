@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { DatabaseIcon, Loader2, Github, Mail } from 'lucide-react';
+import { DatabaseIcon, Loader2, Github, Mail, Chrome } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 
@@ -16,11 +16,11 @@ export function LoginForm() {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const { toast } = useToast();
 
-  const handleGithubSignIn = async () => {
+  const handleOAuthSignIn = async (provider: 'github' | 'google') => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
+        provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`
         }
@@ -29,7 +29,7 @@ export function LoginForm() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to sign in with GitHub',
+        description: error instanceof Error ? error.message : `Failed to sign in with ${provider}`,
         variant: 'destructive',
       });
     } finally {
@@ -187,7 +187,7 @@ export function LoginForm() {
           type="button"
           variant="outline"
           className="w-full"
-          onClick={handleGithubSignIn}
+          onClick={() => handleOAuthSignIn('github')}
           disabled={isLoading}
         >
           <Github className="h-4 w-4 mr-2" />
