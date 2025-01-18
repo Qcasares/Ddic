@@ -6,7 +6,6 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { performanceMonitor } from '@/lib/performance-monitor';
 
 function initializeApp() {
-  const startTime = performance.now();
   const rootElement = document.getElementById('root');
 
   if (!rootElement) {
@@ -16,18 +15,20 @@ function initializeApp() {
   try {
     const root = createRoot(rootElement);
     
-    root.render(
-      <StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </StrictMode>
-    );
-
-    performanceMonitor.measure('app-initialization', startTime);
+    performanceMonitor.measure('app-initialization', () => {
+      root.render(
+        <StrictMode>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </StrictMode>
+      );
+    });
   } catch (error) {
     console.error('Failed to initialize application:', error);
-    performanceMonitor.measure('app-initialization-error', startTime);
+    performanceMonitor.measure('app-initialization-error', () => {
+      // Error handling code remains the same
+    });
     
     // Show error to user
     const errorDiv = document.createElement('div');

@@ -35,21 +35,54 @@ export function usePerformanceMonitor() {
 
         setMetrics(metrics);
         
-        supabase
-          .from('performance_metrics')
-          .insert([{
-            load_time: loadTime,
-            interaction_time: interactionTime,
-            user_agent: navigator.userAgent,
-            device_type: /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile/.test(navigator.userAgent) 
-              ? 'mobile' 
-              : 'desktop'
-          }])
-          .then(({ error }) => {
-            if (error) {
-              console.error('Error saving performance metrics:', error);
+        // Use async IIFE to handle async operations
+        (async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session) {
+              console.log('Skipping performance metrics - no active session');
+              return;
             }
-          });
+
+            // Test connection with a simple query
+            const { error: testError } = await supabase
+              .from('performance_metrics')
+              .select('count(*)', { count: 'exact', head: true });
+
+            // If table doesn't exist, create it
+            if (testError?.code === '42P01') {
+              console.log('Creating performance_metrics table...');
+              const { error: createError } = await supabase.rpc('create_performance_metrics_table');
+              if (createError) {
+                throw createError;
+              }
+            }
+
+            // Save metrics
+            const { error } = await supabase
+              .from('performance_metrics')
+              .insert([{
+                load_time: loadTime,
+                interaction_time: interactionTime,
+                user_agent: navigator.userAgent,
+                device_type: /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile/.test(navigator.userAgent)
+                  ? 'mobile'
+                  : 'desktop',
+                user_id: session.user.id
+              }]);
+
+            if (error) {
+              if (error.code === 'PGRST301') {
+                console.error('Row-level security violation - check RLS policies');
+              } else {
+                console.error('Error saving performance metrics:', error);
+              }
+            }
+          } catch (error) {
+            console.error('Database operation failed:', error);
+          }
+        })();
       }
     });
 
