@@ -147,6 +147,7 @@ export function LoginForm() {
             placeholder="Enter your password"
             required
             minLength={6}
+            autoComplete="current-password"
           />
           <Button
             type="button"

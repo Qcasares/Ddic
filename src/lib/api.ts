@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { Dictionary, Version, DictionaryEntry } from '@/types';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from './supabase';
 
 interface ApiResponse<T> {
   data: T | null;
