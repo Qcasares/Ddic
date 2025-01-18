@@ -152,8 +152,10 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <CreateDictionaryDialog onSuccess={(newDictionary: Dictionary) => {
-          setDictionaries((prev) => [newDictionary, ...prev]);
+        <CreateDictionaryDialog onSuccess={(newDictionary: Dictionary | null) => {
+          if (newDictionary) {
+            setDictionaries((prev) => [newDictionary, ...prev]);
+          }
         }} />
         <SyncIndicator
           isSyncing={false}
