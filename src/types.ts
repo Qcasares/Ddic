@@ -53,9 +53,17 @@ export interface DatabaseQualityRule {
     id: string;
     dictionary_id: string;
     name: string;
-    rule_type: string;
-    configuration: Record<string, any>;
-    severity: string;
+    rule_type: 'regex' | 'required_field' | 'length' | 'format';
+    configuration: {
+        field: string;
+        pattern?: string;
+        flags?: string;
+        allowEmpty?: boolean;
+        minLength?: number;
+        maxLength?: number;
+        format?: 'email' | 'url' | 'date' | 'number';
+    };
+    severity: 'error' | 'warning' | 'info';
     created_at: string;
     created_by: string;
     updated_at: string;
