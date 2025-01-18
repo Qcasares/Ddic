@@ -1,4 +1,3 @@
-```tsx
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -162,10 +161,9 @@ export function NotificationsPanel() {
             {notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`
-                  p-4 rounded-lg border transition-colors
-                  ${notification.read_at ? 'bg-background' : 'bg-primary/5'}
-                `}
+                className={`p-4 rounded-lg border transition-colors ${
+                  notification.read_at ? 'bg-background' : 'bg-primary/5'
+                }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="mt-1">
@@ -196,4 +194,3 @@ export function NotificationsPanel() {
     </div>
   );
 }
-```
