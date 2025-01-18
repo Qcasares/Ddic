@@ -9,7 +9,16 @@ import {
   QualityMetrics
 } from '@/types';
 import { supabase } from './supabase';
-import { QualityRule, QualityScore, qualityRuleEngine } from './quality-management';
+import {
+  QualityRule,
+  QualityScore,
+  qualityRuleEngine,
+  RuleConfiguration,
+  RegexRuleConfiguration,
+  RequiredFieldConfiguration,
+  LengthRuleConfiguration,
+  FormatRuleConfiguration
+} from './quality-management';
 
 interface ApiResponse<T> {
   data: T | null;
@@ -267,6 +276,42 @@ export const api = {
     },
 
     createRule: async (rule: Omit<QualityRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<QualityRule>> => {
+      const getConfigurationForType = (config: RuleConfiguration): DatabaseQualityRule['configuration'] => {
+        const baseConfig = { field: config.field };
+        
+        if (isRegexConfig(config)) {
+          return {
+            ...baseConfig,
+            pattern: config.pattern,
+            flags: config.flags
+          };
+        }
+        
+        if (isRequiredFieldConfig(config)) {
+          return {
+            ...baseConfig,
+            allowEmpty: config.allowEmpty
+          };
+        }
+        
+        if (isLengthConfig(config)) {
+          return {
+            ...baseConfig,
+            minLength: config.minLength,
+            maxLength: config.maxLength
+          };
+        }
+        
+        if (isFormatConfig(config)) {
+          return {
+            ...baseConfig,
+            format: config.format
+          };
+        }
+        
+        return baseConfig;
+      };
+
       try {
         const { data, error } = await supabase
           .from('quality_rules')

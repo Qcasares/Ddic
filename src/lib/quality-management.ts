@@ -13,25 +13,25 @@ export interface QualityRule {
     updatedAt: string;
 }
 
-type BaseRuleConfiguration = {
+export type BaseRuleConfiguration = {
     field: string;
 };
 
-type RegexRuleConfiguration = BaseRuleConfiguration & {
+export type RegexRuleConfiguration = BaseRuleConfiguration & {
     pattern: string;
     flags?: string;
 };
 
-type RequiredFieldConfiguration = BaseRuleConfiguration & {
+export type RequiredFieldConfiguration = BaseRuleConfiguration & {
     allowEmpty?: boolean;
 };
 
-type LengthRuleConfiguration = BaseRuleConfiguration & {
+export type LengthRuleConfiguration = BaseRuleConfiguration & {
     minLength?: number;
     maxLength?: number;
 };
 
-type FormatRuleConfiguration = BaseRuleConfiguration & {
+export type FormatRuleConfiguration = BaseRuleConfiguration & {
     format: 'email' | 'url' | 'date' | 'number';
 };
 
@@ -40,6 +40,18 @@ export type RuleConfiguration =
     | RequiredFieldConfiguration
     | LengthRuleConfiguration
     | FormatRuleConfiguration;
+
+export const isRegexConfig = (config: RuleConfiguration): config is RegexRuleConfiguration =>
+    'pattern' in config;
+
+export const isRequiredFieldConfig = (config: RuleConfiguration): config is RequiredFieldConfiguration =>
+    'allowEmpty' in config;
+
+export const isLengthConfig = (config: RuleConfiguration): config is LengthRuleConfiguration =>
+    'minLength' in config || 'maxLength' in config;
+
+export const isFormatConfig = (config: RuleConfiguration): config is FormatRuleConfiguration =>
+    'format' in config;
 
 export interface QualityDimensions {
     completeness: number;
