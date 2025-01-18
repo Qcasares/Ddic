@@ -131,8 +131,10 @@ export function DictionaryList({ selectedDictionary, onSelect }: DictionaryListP
   if (!dictionaries || dictionaries.length === 0) {
     return (
       <div className="space-y-4">
-        <CreateDictionaryDialog onSuccess={(newDictionary: Dictionary) => {
-          setDictionaries((prev) => [newDictionary, ...prev]);
+        <CreateDictionaryDialog onSuccess={(newDictionary: Dictionary | null) => {
+          if (newDictionary) {
+            setDictionaries((prev) => [newDictionary, ...prev]);
+          }
         }} />
         <div className="flex h-[600px] items-center justify-center border rounded-lg bg-muted/50">
           <div className="text-center">
