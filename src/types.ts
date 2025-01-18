@@ -97,4 +97,34 @@ export interface PerformanceMetrics {
   interactionTime: number;
   resourceTiming: PerformanceResourceTiming[];
   navigationTiming: PerformanceNavigationTiming;
+  user_agent: string;
+  device_type: string;
+  dictionary_id?: string;
+}
+
+// Analytics types
+export interface DictionaryActivity {
+  dictionary_id: string;
+  views: number;
+  edits: number;
+  searches: number;
+  active_users: number;
+}
+
+export interface AnalyticsMetrics {
+  totalEntries: number;
+  totalChanges: number;
+  lastUpdated: string;
+  changeFrequency: number;
+  performance?: {
+    avgLoadTime: number;
+    avgInteractionTime: number;
+    deviceTypes: Record<string, number>;
+  };
+  activity: {
+    views: number;
+    edits: number;
+    searches: number;
+    activeUsers: number;
+  };
 }

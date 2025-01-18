@@ -1,4 +1,4 @@
-import { Dictionary, Version, DictionaryEntry } from '@/types';
+import { Dictionary, Version, DictionaryEntry, AnalyticsMetrics, DictionaryActivity, PerformanceMetrics } from '@/types';
 import { supabase } from './supabase';
 
 interface ApiResponse<T> {
@@ -91,58 +91,104 @@ export const api = {
 
   quality: {
     calculateQualityScore: (entry: DictionaryEntry): number => {
-      // Calculate score based on completeness of required fields
       const requiredFields = ['term', 'definition', 'examples', 'tags'];
       const filledFields = requiredFields.filter(field => entry[field]);
       const completenessScore = (filledFields.length / requiredFields.length) * 50;
-
-      // Calculate score based on metadata quality
       const metadataScore = entry.metadata?.length ? 30 : 0;
-      
-      // Calculate score based on relationships
       const relationshipsScore = entry.related_terms?.length ? 20 : 0;
-
       return Math.min(100, completenessScore + metadataScore + relationshipsScore);
     }
   },
   
   analytics: {
-    getActivityMetrics: async (dictionaryId: string): Promise<ApiResponse<{
-      views: number;
-      edits: number;
-      searches: number;
-      activeUsers: number;
-    }>> => {
+    getActivityMetrics: async (dictionaryId: string): Promise<ApiResponse<AnalyticsMetrics>> => {
       try {
-        const { data, error } = await supabase
+        // Get activity metrics
+        const activityPromise = supabase
           .from('dictionary_activity')
           .select('views, edits, searches, active_users')
           .eq('dictionary_id', dictionaryId)
           .single();
 
-        if (error) throw error;
+        // Get entry count
+        const entriesPromise = supabase
+          .from('dictionary_entries')
+          .select('count', { count: 'exact', head: true })
+          .eq('dictionary_id', dictionaryId);
+
+        // Get last update timestamp
+        const lastUpdatePromise = supabase
+          .from('dictionary_entries')
+          .select('updated_at')
+          .eq('dictionary_id', dictionaryId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        // Get performance metrics
+        const performancePromise = supabase
+          .from('performance_metrics')
+          .select('load_time, interaction_time, device_type')
+          .eq('dictionary_id', dictionaryId);
+
+        const [activity, entries, lastUpdate, performance] = await Promise.all([
+          activityPromise,
+          entriesPromise,
+          lastUpdatePromise,
+          performancePromise
+        ]);
+
+        if (activity.error) throw activity.error;
+        if (entries.error) throw entries.error;
+        if (lastUpdate.error) throw lastUpdate.error;
+        if (performance.error) throw performance.error;
+
+        // Calculate performance metrics
+        const avgLoadTime = performance.data.length > 0
+          ? performance.data.reduce((sum, p) => sum + p.load_time, 0) / performance.data.length
+          : 0;
+
+        const avgInteractionTime = performance.data.length > 0
+          ? performance.data.reduce((sum, p) => sum + p.interaction_time, 0) / performance.data.length
+          : 0;
+
+        const deviceTypes = performance.data.reduce((acc, p) => {
+          acc[p.device_type] = (acc[p.device_type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const activityData = activity.data || { views: 0, edits: 0, searches: 0, active_users: 0 };
+
         return {
           data: {
-            views: data?.views || 0,
-            edits: data?.edits || 0,
-            searches: data?.searches || 0,
-            activeUsers: data?.active_users || 0
+            totalEntries: entries.count || 0,
+            totalChanges: activityData.edits,
+            lastUpdated: lastUpdate.data?.updated_at || new Date().toISOString(),
+            changeFrequency: activityData.views > 0 ? activityData.edits / activityData.views : 0,
+            performance: {
+              avgLoadTime,
+              avgInteractionTime,
+              deviceTypes
+            },
+            activity: {
+              views: activityData.views,
+              edits: activityData.edits,
+              searches: activityData.searches,
+              activeUsers: activityData.active_users
+            }
           },
           error: null
         };
       } catch (error) {
-        return {
-          data: null,
-          error: error as Error
-        };
+        return { data: null, error: error as Error };
       }
     }
   }
-}
+};
 
 export function calculateQualityScore(entry: DictionaryEntry): number {
   return api.quality.calculateQualityScore(entry);
-};
+}
 
 export async function getActivityMetrics(dictionaryId: string) {
   return api.analytics.getActivityMetrics(dictionaryId);
