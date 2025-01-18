@@ -1,5 +1,5 @@
 import { Moon, Sun, Laptop } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/features/shared/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,7 +10,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
 
   return (
     <DropdownMenu>

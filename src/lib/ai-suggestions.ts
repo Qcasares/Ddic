@@ -1,82 +1,56 @@
 import { supabase } from './supabase';
-import { Configuration, OpenAIApi } from 'openai';
+import { OpenAIApi } from 'openai';
 
-// Initialize OpenAI
-const configuration = new Configuration({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
-interface FieldSuggestion {
-  field_name: string;
-  data_type: string;
+export interface FieldSuggestion {
+  name: string;
   description: string;
-  validation_rules?: Record<string, any>;
-  sample_values?: any[];
+  confidence: number;
 }
 
+const apiKey = process.env.OPENAI_API_KEY;
+if (!apiKey) {
+  throw new Error('OPENAI_API_KEY environment variable is required');
+}
+
+const openai = new OpenAIApi({
+  apiKey,
+});
+
 export async function generateFieldSuggestions(
-  schema: string,
-  existingFields: any[]
+  dictionary: any,
+  existingFields: string[]
 ): Promise<FieldSuggestion[]> {
   try {
-    const prompt = `
-      Analyze this database schema and suggest field definitions:
-      ${schema}
-
-      Existing fields:
-      ${JSON.stringify(existingFields, null, 2)}
-
-      Provide suggestions for additional fields that would complement the existing schema.
-      Include field name, data type, description, and any relevant validation rules.
-      Format the response as a JSON array of field objects.
-    `;
-
+    const prompt = `Generate 5 field suggestions for a dictionary about ${dictionary.name}. Existing fields: ${existingFields.join(', ')}`;
+    
     const response = await openai.createCompletion({
-      model: "text-davinci-003",
+      model: 'text-davinci-003',
       prompt,
-      max_tokens: 1000,
+      max_tokens: 200,
       temperature: 0.7,
     });
 
-    const suggestions = JSON.parse(response.data.choices[0].text || '[]');
-    return suggestions;
+    return parseSuggestions(response.data.choices[0].text || '');
   } catch (error) {
-    console.error('Error generating field suggestions:', error);
-    throw error;
+    console.error('Error generating suggestions:', error);
+    return [];
   }
 }
 
-export async function analyzeFieldQuality(field: any): Promise<{
-  score: number;
-  suggestions: string[];
-}> {
-  try {
-    const prompt = `
-      Analyze this field definition and provide quality suggestions:
-      ${JSON.stringify(field, null, 2)}
+function parseSuggestions(text: string): FieldSuggestion[] {
+  const suggestions: FieldSuggestion[] = [];
+  const lines = text.split('\n').filter(line => line.trim());
+  
+  lines.forEach(line => {
+    const [name, description] = line.split(':');
+    if (name && description) {
+      suggestions.push({
+        name: name.trim(),
+        description: description.trim(),
+        confidence: 0.8, // Default confidence
+      });
+    }
+  });
 
-      Consider:
-      1. Naming conventions
-      2. Description completeness
-      3. Data type appropriateness
-      4. Validation rules
-      5. Sample values
-
-      Provide a quality score (0-100) and list of improvement suggestions.
-      Format the response as JSON: { "score": number, "suggestions": string[] }
-    `;
-
-    const response = await openai.createCompletion({
-      model: "text-davinci-003",
-      prompt,
-      max_tokens: 500,
-      temperature: 0.3,
-    });
-
-    return JSON.parse(response.data.choices[0].text || '{"score": 0, "suggestions": []}');
-  } catch (error) {
-    console.error('Error analyzing field quality:', error);
-    throw error;
-  }
+  return suggestions;
 }
