@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { usePerformanceMonitor } from '@/lib/performance-monitor';
 import { Button } from '@/components/ui/button';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
