@@ -25,16 +25,39 @@ export function AuthCallbackHandler() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      const hash = window.location.hash;
-      const query = new URLSearchParams(window.location.search);
-      const type = query.get('type');
-
-      // Set timeout for the entire auth process
       const timeoutId = setTimeout(() => {
         setError('Authentication timed out. Please try again.');
       }, TIMEOUT_DURATION);
 
       try {
+        // Get URL parameters
+        const hash = window.location.hash;
+        const query = new URLSearchParams(window.location.search);
+        const type = query.get('type');
+
+        // Handle hash-based OAuth (implicit flow)
+        if (hash) {
+          const hashParams = new URLSearchParams(hash.substring(1));
+          const access_token = hashParams.get('access_token');
+          const refresh_token = hashParams.get('refresh_token');
+
+          if (access_token && refresh_token) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (sessionError) throw sessionError;
+          }
+        }
+
+        // Handle code-based OAuth
+        const code = query.get('code');
+        if (code) {
+          // The code exchange is handled automatically by Supabase client
+          const { error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) throw sessionError;
+        }
+
         // Handle password reset
         if (type === 'recovery') {
           const access_token = query.get('access_token');
@@ -76,12 +99,8 @@ export function AuthCallbackHandler() {
           return;
         }
 
-        // Handle OAuth callbacks
-        if (hash || query.get('code')) {
-          // Check for either hash-based or code-based OAuth flow
-          const { error: sessionError } = await supabase.auth.getSession();
-          if (sessionError) throw sessionError;
-
+        // If we have either hash params or code, consider it a successful OAuth login
+        if (hash || code) {
           toast({
             title: 'Success',
             description: 'Successfully signed in',
