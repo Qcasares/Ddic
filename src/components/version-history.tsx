@@ -5,18 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { Version as VersionType } from '@/types';
-
-import { VersionHistoryProps } from '@/types';
-
-interface Version {
-  id: string;
-  entry_id: string;
-  version: number;
-  changes: Record<string, any>;
-  created_at: string;
-  created_by: string;
-}
+import { Version, VersionHistoryProps } from '@/types';
 
 function VersionSkeleton() {
   return (
@@ -115,7 +104,7 @@ export function VersionHistory({ dictionaryId }: VersionHistoryProps) {
               </div>
               
               <h4 className="text-sm font-medium">
-                Changes to {version.dictionary_entries?.field_name}
+                Changes to {version.dictionary_entries.length > 0 ? version.dictionary_entries[0].field_name : 'unknown field'}
               </h4>
               
               <div className="space-y-2">

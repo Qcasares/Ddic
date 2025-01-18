@@ -78,6 +78,7 @@ export interface Version {
     data_type: string;
     description: string | null;
   }[];
+  changes: Record<string, any>;
 }
 
 export interface VersionHistoryProps {
