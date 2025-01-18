@@ -1,4 +1,13 @@
-import { Dictionary, Version, DictionaryEntry, AnalyticsMetrics } from '@/types';
+import {
+  Dictionary,
+  Version,
+  DictionaryEntry,
+  AnalyticsMetrics,
+  DatabaseQualityRule,
+  DatabaseQualityScore,
+  QualityTrendData,
+  QualityMetrics
+} from '@/types';
 import { supabase } from './supabase';
 
 interface ApiResponse<T> {
