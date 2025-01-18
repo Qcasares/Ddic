@@ -234,6 +234,226 @@ export const api = {
         return { data: null, error: error as Error };
       }
     }
+  },
+
+  quality: {
+    getRules: async (dictionaryId: string): Promise<ApiResponse<QualityRule[]>> => {
+      try {
+        const { data, error } = await supabase
+          .from('quality_rules')
+          .select('*')
+          .eq('dictionary_id', dictionaryId);
+
+        if (error) throw error;
+        return {
+          data: data.map(rule => ({
+            id: rule.id,
+            dictionaryId: rule.dictionary_id,
+            name: rule.name,
+            ruleType: rule.rule_type,
+            configuration: rule.configuration,
+            severity: rule.severity,
+            createdAt: rule.created_at,
+            createdBy: rule.created_by,
+            updatedAt: rule.updated_at
+          })),
+          error: null
+        };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    createRule: async (rule: Omit<QualityRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<QualityRule>> => {
+      try {
+        const { data, error } = await supabase
+          .from('quality_rules')
+          .insert({
+            dictionary_id: rule.dictionaryId,
+            name: rule.name,
+            rule_type: rule.ruleType,
+            configuration: rule.configuration,
+            severity: rule.severity,
+            created_by: rule.createdBy
+          })
+          .single();
+
+        if (error) throw error;
+        return {
+          data: {
+            id: data.id,
+            dictionaryId: data.dictionary_id,
+            name: data.name,
+            ruleType: data.rule_type,
+            configuration: data.configuration,
+            severity: data.severity,
+            createdAt: data.created_at,
+            createdBy: data.created_by,
+            updatedAt: data.updated_at
+          },
+          error: null
+        };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    updateRule: async (id: string, updates: Partial<Omit<QualityRule, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ApiResponse<QualityRule>> => {
+      try {
+        const { data, error } = await supabase
+          .from('quality_rules')
+          .update({
+            name: updates.name,
+            rule_type: updates.ruleType,
+            configuration: updates.configuration,
+            severity: updates.severity
+          })
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        return {
+          data: {
+            id: data.id,
+            dictionaryId: data.dictionary_id,
+            name: data.name,
+            ruleType: data.rule_type,
+            configuration: data.configuration,
+            severity: data.severity,
+            createdAt: data.created_at,
+            createdBy: data.created_by,
+            updatedAt: data.updated_at
+          },
+          error: null
+        };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    deleteRule: async (id: string): Promise<ApiResponse<void>> => {
+      try {
+        const { error } = await supabase
+          .from('quality_rules')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return { data: null, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    evaluateEntry: async (entryId: string): Promise<ApiResponse<QualityScore>> => {
+      try {
+        // Get the entry and its dictionary
+        const { data: entry, error: entryError } = await supabase
+          .from('dictionary_entries')
+          .select('*, dictionaries!inner(*)')
+          .eq('id', entryId)
+          .single();
+
+        if (entryError) throw entryError;
+
+        // Load rules for the dictionary
+        await qualityRuleEngine.loadRules(entry.dictionary_id);
+
+        // Evaluate the entry
+        const score = await qualityRuleEngine.evaluateEntry(entry);
+
+        return { data: score, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    getDictionaryQuality: async (dictionaryId: string): Promise<ApiResponse<{
+      averageScore: number;
+      qualityTrend: Array<{ date: string; score: number }>;
+      commonIssues: Array<{ rule: string; count: number }>;
+    }>> => {
+      try {
+        // Get all quality scores for the dictionary
+        const { data: entries, error: entriesError } = await supabase
+          .from('dictionary_entries')
+          .select('id')
+          .eq('dictionary_id', dictionaryId);
+
+        if (entriesError) throw entriesError;
+
+        const entryIds = entries.map(e => e.id);
+
+        const { data: scores, error: scoresError } = await supabase
+          .from('quality_scores')
+          .select('*')
+          .in('entry_id', entryIds)
+          .order('created_at', { ascending: false });
+
+        if (scoresError) throw scoresError;
+
+        // Calculate average score
+        const averageScore = scores.length > 0
+          ? scores.reduce((sum, score) => sum + score.total_score, 0) / scores.length
+          : 0;
+
+        // Calculate quality trend (last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const qualityTrend = scores
+          .filter(score => new Date(score.created_at) >= thirtyDaysAgo)
+          .reduce((acc, score) => {
+            const date = score.created_at.split('T')[0];
+            if (!acc[date]) {
+              acc[date] = { sum: 0, count: 0 };
+            }
+            acc[date].sum += score.total_score;
+            acc[date].count++;
+            return acc;
+          }, {} as Record<string, { sum: number; count: number }>);
+
+        // Calculate common issues
+        const issueCount: Record<string, number> = {};
+        scores.forEach(score => {
+          score.failed_rules.forEach(rule => {
+            issueCount[rule.ruleId] = (issueCount[rule.ruleId] || 0) + 1;
+          });
+        });
+
+        // Get rule names for common issues
+        const ruleIds = Object.keys(issueCount);
+        const { data: rules, error: rulesError } = await supabase
+          .from('quality_rules')
+          .select('id, name')
+          .in('id', ruleIds);
+
+        if (rulesError) throw rulesError;
+
+        const ruleNames = Object.fromEntries(
+          rules.map(rule => [rule.id, rule.name])
+        );
+
+        return {
+          data: {
+            averageScore,
+            qualityTrend: Object.entries(qualityTrend).map(([date, { sum, count }]) => ({
+              date,
+              score: sum / count
+            })).sort((a, b) => a.date.localeCompare(b.date)),
+            commonIssues: Object.entries(issueCount)
+              .map(([ruleId, count]) => ({
+                rule: ruleNames[ruleId] || 'Unknown Rule',
+                count
+              }))
+              .sort((a, b) => b.count - a.count)
+          },
+          error: null
+        };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    }
   }
 };
 
