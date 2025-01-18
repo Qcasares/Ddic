@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { Session } from '@supabase/supabase-js';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -11,51 +10,14 @@ import { PerformanceDashboard } from '@/components/performance-dashboard';
 import { DictionaryView } from '@/components/dictionary-view';
 import { ProfileView } from '@/components/profile-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { LoginForm } from '@/components/login-form';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { AuthProvider, useAuth } from '@/lib/auth-context';
 
-export default function App() {
+function AppContent() {
   const [selectedDictionary, setSelectedDictionary] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    // Check for initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast({
-        title: 'Signed out',
-        description: 'You have been signed out successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to sign out',
-        variant: 'destructive',
-      });
-    }
-  };
+  const { session, loading: isLoading, signOut } = useAuth();
 
   if (isLoading) {
     return (
