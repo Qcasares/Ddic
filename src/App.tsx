@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { DatabaseIcon, BookOpen, Settings, LogOut, UserCircle, Activity } from 'lucide-react';
+import { AuthCallbackHandler } from '@/components/auth-callback-handler';
 import { DictionaryList } from '@/components/dictionary-list';
 import { PerformanceDashboard } from '@/components/performance-dashboard';
 import { DictionaryView } from '@/components/dictionary-view';
@@ -68,6 +69,19 @@ export default function App() {
               <p className="text-sm text-muted-foreground">Loading...</p>
             </div>
           </div>
+          <Toaster />
+        </TooltipProvider>
+      </ThemeProvider>
+    );
+  }
+
+  // Handle auth callbacks
+  const isAuthCallback = window.location.pathname.startsWith('/auth/');
+  if (isAuthCallback) {
+    return (
+      <ThemeProvider defaultTheme="system" storageKey="ui-theme">
+        <TooltipProvider>
+          <AuthCallbackHandler />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>
