@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Dictionary, Version } from '@/types';
+import { Dictionary, Version, DictionaryEntry } from '@/types';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -92,5 +92,59 @@ export const api = {
         return { data: null, error: error as Error };
       }
     }
+  },
+
+  quality: {
+    calculateQualityScore: (entry: DictionaryEntry): number => {
+      // Calculate score based on completeness of required fields
+      const requiredFields = ['term', 'definition', 'examples', 'tags'];
+      const filledFields = requiredFields.filter(field => entry[field]);
+      const completenessScore = (filledFields.length / requiredFields.length) * 50;
+
+      // Calculate score based on metadata quality
+      const metadataScore = entry.metadata?.length ? 30 : 0;
+      
+      // Calculate score based on relationships
+      const relationshipsScore = entry.related_terms?.length ? 20 : 0;
+
+      return Math.min(100, completenessScore + metadataScore + relationshipsScore);
+    }
+  },
+  
+  analytics: {
+    getActivityMetrics: async (dictionaryId: string): Promise<ApiResponse<{
+      views: number;
+      edits: number;
+      searches: number;
+      activeUsers: number;
+    }>> => {
+      try {
+        const { data, error } = await supabase
+          .from('dictionary_activity')
+          .select('views, edits, searches, active_users')
+          .eq('dictionary_id', dictionaryId)
+          .single();
+
+        if (error) throw error;
+        return {
+          data: {
+            views: data?.views || 0,
+            edits: data?.edits || 0,
+            searches: data?.searches || 0,
+            activeUsers: data?.active_users || 0
+          },
+          error: null
+        };
+      } catch (error) {
+        return {
+          data: null,
+          error: error as Error
+        };
+      }
+    }
   }
+}
+
+export function calculateQualityScore(entry: DictionaryEntry): number {
+  return api.quality.calculateQualityScore(entry);
 };

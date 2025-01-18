@@ -35,6 +35,12 @@ export interface DictionaryEntry {
   updated_at: string;
   created_by: string;
   version: number;
+  term: string;
+  definition: string;
+  examples: string[];
+  tags: string[];
+  related_terms: string[];
+  [key: string]: any;
 }
 
 export interface EntryVersion {
