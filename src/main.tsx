@@ -2,8 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { performanceMonitor } from '@/lib/performance-monitor';
+import { ErrorBoundary } from '@/features/shared/error-boundary';
+import { performanceMonitor } from '@/features/performance/performance-monitor';
 
 function initializeApp() {
   const rootElement = document.getElementById('root');

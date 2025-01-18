@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ThemeProvider } from '@/components/theme-provider';
+import { ThemeProvider } from '@/features/shared/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { DatabaseIcon, BookOpen, Settings, LogOut, UserCircle, Activity } from 'lucide-react';
-import { AuthCallbackHandler } from '@/components/auth-callback-handler';
-import { DictionaryList } from '@/components/dictionary-list';
-import { PerformanceDashboard } from '@/components/performance-dashboard';
-import { DictionaryView } from '@/components/dictionary-view';
-import { ProfileView } from '@/components/profile-view';
+import { AuthCallbackHandler } from '@/features/auth/auth-callback-handler';
+import { DictionaryList } from '@/features/dictionaries/dictionary-list';
+import { PerformanceDashboard } from '@/features/performance/performance-dashboard';
+import { DictionaryView } from '@/features/dictionaries/dictionary-view';
+import { ProfileView } from '@/features/shared/profile-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ErrorBoundary } from '@/components/error-boundary';
-import { LoginForm } from '@/components/login-form';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { ErrorBoundary } from '@/features/shared/error-boundary';
+import { LoginForm } from '@/features/auth/login-form';
+import { ThemeToggle } from '@/features/shared/theme-toggle';
+import { AuthProvider, useAuth } from '@/features/auth/auth-context';
 
 function AppContent() {
   const [selectedDictionary, setSelectedDictionary] = useState<string | null>(null);
