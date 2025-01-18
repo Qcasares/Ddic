@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
@@ -25,9 +25,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initial session check
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        setError(error);
+    supabase.auth.getSession().then(({ data: { session }, error: authError }) => {
+      if (authError) {
+        setError(new Error(authError.message));
         toast({
           title: 'Error',
           description: 'Failed to retrieve session',
@@ -52,8 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      const { error: authError } = await supabase.auth.signOut();
+      if (authError) throw new Error(authError.message);
       
       toast({
         title: 'Success',

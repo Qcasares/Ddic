@@ -1,7 +1,6 @@
 import { useDictionaryEntries } from '@/hooks/use-dictionary-entries';
 import { generateFieldSuggestions, FieldSuggestion } from '@/lib/ai-suggestions';
 import { useState } from 'react';
-import type { DictionaryEntry } from '@/types';
 
 export function AISuggestions({ dictionaryId }: { dictionaryId: string }) {
   const { data } = useDictionaryEntries({
