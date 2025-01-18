@@ -22,7 +22,6 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const performanceMetrics = usePerformanceMonitor();
 
   useEffect(() => {
     // Check for initial session
