@@ -22,7 +22,11 @@ export function LoginForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: provider === 'google' ? {
+            access_type: 'offline',
+            prompt: 'consent'
+          } : undefined
         }
       });
       if (error) throw error;
@@ -183,16 +187,29 @@ export function LoginForm() {
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={() => handleOAuthSignIn('github')}
-          disabled={isLoading}
-        >
-          <Github className="h-4 w-4 mr-2" />
-          GitHub
-        </Button>
+        <div className="grid grid-cols-2 gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => handleOAuthSignIn('github')}
+            disabled={isLoading}
+          >
+            <Github className="h-4 w-4 mr-2" />
+            GitHub
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => handleOAuthSignIn('google')}
+            disabled={isLoading}
+          >
+            <Chrome className="h-4 w-4 mr-2" />
+            Google
+          </Button>
+        </div>
 
         <Button
           type="button"
