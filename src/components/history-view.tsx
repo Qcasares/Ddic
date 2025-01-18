@@ -9,10 +9,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { 
-  History, 
-  Calendar as CalendarIcon, 
-  Filter, 
+import {
+  Calendar as CalendarIcon,
+  Filter,
   RotateCcw,
   User,
   Loader2
@@ -31,10 +30,9 @@ import {
 
 interface VersionHistoryProps {
   dictionaryId: string;
-  selectedEntryId?: string;
 }
 
-export function VersionHistory({ dictionaryId, selectedEntryId }: VersionHistoryProps) {
+export function VersionHistory({ dictionaryId }: VersionHistoryProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [totalEntries, setTotalEntries] = useState(0);

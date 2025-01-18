@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './supabase';
+import { supabase } from '@/lib/supabase';
 
 interface PerformanceMetrics {
   loadTime: number;
@@ -95,14 +95,27 @@ export function usePerformanceMonitor() {
   return metrics;
 }
 
+interface GetMetricsOptions {
+  startTime?: number;
+}
+
 export const performanceMonitor = {
   usePerformanceMonitor,
-  measure: (name: string, callback: () => void) => {
+  measure: async <T>(name: string, callback: () => Promise<T>): Promise<T> => {
     performance.mark(`${name}-start`);
-    callback();
+    const result = await callback();
     performance.mark(`${name}-end`);
     performance.measure(name, `${name}-start`, `${name}-end`);
-    const measure = performance.getEntriesByName(name)[0];
-    return measure.duration;
+    return result;
+  },
+  getMetrics: (options: GetMetricsOptions = {}) => {
+    const { startTime } = options;
+    const entries = performance.getEntriesByType('measure');
+    
+    if (startTime) {
+      return entries.filter(entry => entry.startTime >= startTime);
+    }
+    
+    return entries;
   }
 };

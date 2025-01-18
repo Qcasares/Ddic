@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Book, 
-  Plus, 
   Search, 
   Tag,
   Clock,
@@ -18,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { CreateTermDialog } from './create-term-dialog';
 import { formatDistanceToNow } from 'date-fns';
-import { withErrorHandling, AppError, ErrorType } from '@/lib/error-handler';
+import { withErrorHandling } from '@/lib/error-handler';
 import { useDebounce } from '@/hooks/use-debounce';
 
 interface BusinessGlossaryProps {
@@ -67,11 +65,14 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
           }
 
           if (dictionaryId) {
-            query = query.in('id', (qb) =>
-              qb.select('term_id')
-                .from('term_relationships')
-                .eq('entry_id', dictionaryId)
-            );
+            const { data: termIds } = await supabase
+              .from('term_relationships')
+              .select('term_id')
+              .eq('entry_id', dictionaryId);
+            
+            if (termIds) {
+              query = query.in('id', termIds.map(t => t.term_id));
+            }
           }
 
           const { data, error } = await query;

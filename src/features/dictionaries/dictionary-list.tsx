@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { CreateDictionaryDialog } from './create-dictionary-dialog';
 import { EditDictionaryDialog } from './edit-dictionary-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SyncIndicator } from './sync-indicator';
+import { SyncIndicator } from '@/components/sync-indicator';
 import {
   DropdownMenu,
   DropdownMenuContent,

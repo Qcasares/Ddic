@@ -24,8 +24,7 @@ export function useVirtualizedList<T>(
   const containerRef = useRef<HTMLDivElement>(null);
   const lastEndReachedRef = useRef(false);
 
-  // Calculate visible items
-  const visibleCount = Math.ceil(containerHeight / itemHeight);
+  // Calculate dimensions
   const totalHeight = items.length * itemHeight;
   const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
   const endIndex = Math.min(

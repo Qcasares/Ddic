@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DataLineage } from './data-lineage';
-import { QualityDashboard } from './quality-dashboard';
-import { AnalyticsDashboard } from './analytics-dashboard';
-import { ApprovalQueue } from './approval-queue';
-import { BusinessGlossary } from './business-glossary';
-import { VersionHistory } from './version-history';
-import { CommentsSection } from './comments-section';
-import { FieldManagement } from './field-management';
+import { DataLineage } from '@/components/data-lineage';
+import { QualityDashboard } from '@/features/analytics/quality-dashboard';
+import { AnalyticsDashboard } from '@/features/analytics/analytics-dashboard';
+import { ApprovalQueue } from '@/components/approval-queue';
+import { BusinessGlossary } from '@/components/business-glossary';
+import { VersionHistory } from '@/components/version-history';
+import { CommentsSection } from '@/components/comments-section';
+import { FieldManagement } from '@/components/field-management';
 
 interface DictionaryViewProps {
   dictionaryId: string;
@@ -107,10 +107,7 @@ export function DictionaryView({ dictionaryId }: DictionaryViewProps) {
       </TabsContent>
 
       <TabsContent value="history">
-        <VersionHistory
-          dictionaryId={dictionaryId}
-          selectedEntryId={selectedEntry}
-        />
+        <VersionHistory dictionaryId={dictionaryId} />
       </TabsContent>
 
       <TabsContent value="comments">

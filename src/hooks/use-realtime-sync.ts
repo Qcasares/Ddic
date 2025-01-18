@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { realtimeManager } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
-interface SyncStatus {
+export interface SyncStatus {
   isSyncing: boolean;
   lastSyncedAt: Date | null;
   error: Error | null;

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Inbox, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +22,17 @@ interface QueueEntry {
   user: {
     email: string;
   };
+}
+
+interface SupabaseEntry {
+  id: string;
+  field_name: string;
+  workflow_status: string;
+  created_at: string;
+  created_by: string;
+  user: {
+    email: string;
+  }[];
 }
 
 export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProps) {
@@ -54,7 +64,16 @@ export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProp
             .order('created_at', { ascending: false });
 
           if (error) throw error;
-          setEntries(data);
+          
+          // Transform the data to match QueueEntry type
+          const transformedData = (data as SupabaseEntry[]).map(entry => ({
+            ...entry,
+            user: {
+              email: entry.user[0]?.email || ''
+            }
+          }));
+          
+          setEntries(transformedData);
         }, {
           maxRetries: 2,
           retryDelay: 500

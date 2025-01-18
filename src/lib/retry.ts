@@ -1,3 +1,4 @@
+
 // Retry configuration
 interface RetryConfig {
   maxAttempts?: number;
@@ -60,8 +61,8 @@ export async function retry<T>(
 // Retry decorator
 export function withRetry(config: RetryConfig = {}) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: any,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;

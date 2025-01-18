@@ -1,6 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { performanceMonitor } from './performance-monitor';
+import { createClient, RealtimeChannel, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import type {
+  SupabaseClient,
+  RealtimeManagerInterface,
+  PostgresChangesFilter,
+  RealtimePostgresChangesPayload
+} from '../types/supabase';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -13,7 +17,7 @@ if (!supabaseAnonKey) {
   throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -26,18 +30,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
-export class RealtimeManager {
-  private channels: Map<string, RealtimeChannel> = new Map();
+export class RealtimeManager implements RealtimeManagerInterface {
   private retryAttempts: Map<string, number> = new Map();
   private maxRetries = 5;
   private retryDelay = 1000;
   private reconnectTimeout: number | null = null;
   
+  public channels: Map<string, RealtimeChannel> = new Map();
+  
   subscribe(
-    channelName: string, 
-    table: string, 
-    onUpdate: (payload: any) => void,
-    onError?: (error: any) => void,
+    channelName: string,
+    table: string,
+    onUpdate: (payload: RealtimePostgresChangesPayload) => void,
+    onError?: (error: Error) => void,
     onConnectionChange?: (status: 'CONNECTED' | 'DISCONNECTED') => void
   ): () => void {
     if (this.channels.has(channelName)) {
@@ -45,18 +50,19 @@ export class RealtimeManager {
     }
 
     const channel = supabase.channel(channelName)
-      .on('postgres_changes',
+      .on(
+        'postgres_changes' as any, // Type assertion needed due to Supabase types
         {
           event: '*',
           schema: 'public',
           table: table
-        },
-        (payload) => {
+        } as PostgresChangesFilter,
+        (payload: RealtimePostgresChangesPayload) => {
           this.retryAttempts.set(channelName, 0);
           onUpdate(payload);
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           console.log(`Connected to ${channelName}`);
           onConnectionChange?.('CONNECTED');
@@ -78,10 +84,10 @@ export class RealtimeManager {
   private handleDisconnect(
     channelName: string,
     table: string,
-    onUpdate: (payload: any) => void,
-    onError?: (error: any) => void,
+    onUpdate: (payload: RealtimePostgresChangesPayload) => void,
+    onError?: (error: Error) => void,
     onConnectionChange?: (status: 'CONNECTED' | 'DISCONNECTED') => void
-  ) {
+  ): void {
     const attempts = this.retryAttempts.get(channelName) || 0;
     
     if (attempts < this.maxRetries) {
@@ -135,7 +141,7 @@ export class RealtimeManager {
 export const realtimeManager = new RealtimeManager();
 
 // Initialize Supabase connection
-supabase.auth.onAuthStateChange((event) => {
+supabase.auth.onAuthStateChange((event: AuthChangeEvent, _session: Session | null) => {
   if (event === 'SIGNED_IN') {
     console.log('Supabase connection established');
   } else if (event === 'SIGNED_OUT') {
@@ -152,7 +158,9 @@ if (typeof window !== 'undefined' && window.location.hash) {
   if (accessToken && refreshToken) {
     supabase.auth.setSession({
       access_token: accessToken,
-      refresh_token: refreshToken
-    }).catch(console.error);
+      refresh_token: refreshToken,
+      provider_token: null,
+      provider_refresh_token: null
+    } as Session).catch(console.error);
   }
 }

@@ -89,7 +89,6 @@ export interface Version {
 
 export interface VersionHistoryProps {
   dictionaryId: string;
-  selectedEntryId?: string | null;
 }
 
 export interface PerformanceMetrics {

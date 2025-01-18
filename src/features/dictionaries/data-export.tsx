@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { exportDictionary } from '@/lib/api';
-import { Download, FileJson, FileSpreadsheet } from 'lucide-react';
+import { FileJson, FileSpreadsheet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface DataExportProps {
@@ -15,10 +15,14 @@ export function DataExport({ dictionaryId }: DataExportProps) {
   const handleExport = async (format: 'json' | 'csv') => {
     try {
       setIsExporting(true);
-      const data = await exportDictionary(dictionaryId, format);
+      const { data: exportData, error } = await exportDictionary(dictionaryId, format);
+      if (error) throw error;
+      
+      // Ensure exportData is a string
+      const exportString = typeof exportData === 'string' ? exportData : JSON.stringify(exportData);
       
       // Create blob and download
-      const blob = new Blob([data], { type: format === 'json' ? 'application/json' : 'text/csv' });
+      const blob = new Blob([exportString], { type: format === 'json' ? 'application/json' : 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

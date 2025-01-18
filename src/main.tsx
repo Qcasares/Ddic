@@ -5,7 +5,7 @@ import './index.css';
 import { ErrorBoundary } from '@/features/shared/error-boundary';
 import { performanceMonitor } from '@/features/performance/performance-monitor';
 
-function initializeApp() {
+async function initializeApp() {
   const rootElement = document.getElementById('root');
 
   if (!rootElement) {
@@ -15,19 +15,22 @@ function initializeApp() {
   try {
     const root = createRoot(rootElement);
     
-    performanceMonitor.measure('app-initialization', () => {
-      root.render(
-        <StrictMode>
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
-        </StrictMode>
-      );
+    await performanceMonitor.measure('app-initialization', async () => {
+      return new Promise<void>((resolve) => {
+        root.render(
+          <StrictMode>
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </StrictMode>
+        );
+        resolve();
+      });
     });
   } catch (error) {
     console.error('Failed to initialize application:', error);
-    performanceMonitor.measure('app-initialization-error', () => {
-      // Error handling code remains the same
+    await performanceMonitor.measure('app-initialization-error', async () => {
+      return Promise.resolve();
     });
     
     // Show error to user

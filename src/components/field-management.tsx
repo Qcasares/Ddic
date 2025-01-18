@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus } from 'lucide-react';
+import { Dialog } from '@/components/ui/dialog';
+import { Search } from 'lucide-react';
 import { CreateEntryDialog } from './create-entry-dialog';
 import { EditEntryDialog } from './edit-entry-dialog';
 import { RelationsDialog } from './relations-dialog';
@@ -13,7 +13,7 @@ import { VirtualizedList } from './virtualized-list';
 import { useVirtualizedList } from '@/hooks/use-virtualized-list';
 import { useDictionaryEntries } from '@/hooks/use-dictionary-entries';
 import { useDebounce } from '@/hooks/use-debounce';
-import { SyncIndicator } from './sync-indicator';
+import { SyncIndicator } from '@/components/sync-indicator';
 
 interface FieldManagementProps {
   dictionaryId: string;
@@ -35,7 +35,7 @@ export function FieldManagement({ dictionaryId, onViewHistory }: FieldManagement
   
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  const { data, isLoading, error, refetch, syncStatus, isOnline } = useDictionaryEntries({
+  const { data, refetch, syncStatus, isOnline } = useDictionaryEntries({
     dictionaryId,
     page,
     pageSize,
@@ -47,7 +47,6 @@ export function FieldManagement({ dictionaryId, onViewHistory }: FieldManagement
 
   const {
     containerRef,
-    visibleItems,
     totalHeight,
     offsetY,
     onScroll,
@@ -88,7 +87,7 @@ export function FieldManagement({ dictionaryId, onViewHistory }: FieldManagement
     refetch();
   }, [refetch]);
 
-  const renderTableRow = useCallback((entry: any, index: number) => (
+  const renderTableRow = useCallback((entry: any) => (
     <div className="flex items-center px-4 py-2 border-b">
       <div className="flex-1 font-medium">{entry.field_name}</div>
       <div className="flex-1">
@@ -136,10 +135,9 @@ export function FieldManagement({ dictionaryId, onViewHistory }: FieldManagement
             lastSyncedAt={syncStatus.lastSyncedAt}
             error={syncStatus.error}
           />
-          <CreateEntryDialog 
-            dictionaryId={dictionaryId}
-            onSuccess={handleRefresh}
-          />
+          <Dialog onOpenChange={(open: boolean) => !open && handleRefresh()}>
+            <CreateEntryDialog dictionaryId={dictionaryId} />
+          </Dialog>
         </div>
       </div>
 

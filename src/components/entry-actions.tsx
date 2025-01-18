@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+// Removed unused useNavigate import
 
 interface EntryActionsProps {
   entryId: string;

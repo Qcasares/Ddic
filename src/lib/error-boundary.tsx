@@ -1,8 +1,8 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { performanceMonitor } from './performance-monitor';
+import { performanceMonitor } from '@/features/performance/performance-monitor';
 import { requestBatcher } from './request-batcher';
 
 interface Props {

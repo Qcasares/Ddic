@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { cacheManager } from './cache-manager';
 import { QueryOptimizer } from './query-optimizer';
-import { performanceMonitor } from './performance-monitor';
+import { performanceMonitor } from '@/features/performance/performance-monitor';
 
 export interface HistoryEntry {
   id: string;
@@ -33,9 +33,7 @@ export async function fetchHistory(
   filters?: HistoryFilter
 ) {
   const cacheKey = `history:${dictionaryId}:${page}:${pageSize}:${JSON.stringify(filters)}`;
-  const startTime = performance.now();
-
-  try {
+  return performanceMonitor.measure('fetchHistory', async () => {
     return await cacheManager.get(
       cacheKey,
       async () => {
@@ -95,18 +93,14 @@ export async function fetchHistory(
       },
       30000 // 30 second cache
     );
-  } finally {
-    performanceMonitor.measure('fetchHistory', startTime);
-  }
+  });
 }
 
 export async function revertChange(
   entryId: string,
   version: number
 ): Promise<void> {
-  const startTime = performance.now();
-
-  try {
+  await performanceMonitor.measure('revertChange', async () => {
     // Fetch the version to revert to
     const { data: versionData, error: versionError } = await supabase
       .from('entry_versions')
@@ -135,10 +129,8 @@ export async function revertChange(
     if (updateError) throw updateError;
 
     // Invalidate relevant caches
-    cacheManager.invalidate(`history:${versionData.dictionary_id}*`);
-  } finally {
-    performanceMonitor.measure('revertChange', startTime);
-  }
+    await cacheManager.invalidate(`history:${versionData.dictionary_id}*`);
+  });
 }
 
 export function getChangeDescription(change: Record<string, any>): string {

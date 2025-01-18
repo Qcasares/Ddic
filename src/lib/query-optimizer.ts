@@ -52,7 +52,7 @@ export class QueryOptimizer {
 
   static buildSearchVector(fields: string[], values: any[]): string {
     return fields
-      .map((field, index) => `setweight(to_tsvector('english', coalesce(${values[index]}::text, '')), '${String.fromCharCode(65 + index)}')`)
+      .map((_, index) => `setweight(to_tsvector('english', coalesce(${values[index]}::text, '')), '${String.fromCharCode(65 + index)}')`)
       .join(' || ');
   }
 }

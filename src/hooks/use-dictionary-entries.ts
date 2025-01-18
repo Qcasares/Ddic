@@ -1,7 +1,12 @@
 import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useCache } from './use-cache';
-import { useRealtimeSync } from './use-realtime-sync';
+import { useRealtimeSync, SyncStatus } from './use-realtime-sync';
+
+interface DictionaryEntriesData {
+  entries: DictionaryEntry[];
+  total: number;
+}
 
 interface DictionaryEntry {
   id: string;
@@ -100,11 +105,11 @@ export function useDictionaryEntries({
   );
 
   return {
-    data: realtimeData,
+    data: realtimeData as DictionaryEntriesData,
     isLoading,
     error,
     refetch,
-    syncStatus,
+    syncStatus: syncStatus as SyncStatus,
     isOnline
   };
 }

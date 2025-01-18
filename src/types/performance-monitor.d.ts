@@ -1,6 +1,6 @@
 declare module '@/lib/performance-monitor' {
   export const performanceMonitor: {
-    measure: (name: string, callback: () => void) => void;
+    measure: <T>(name: string, callback: () => Promise<T> | T) => Promise<T>;
     track: (event: string, data?: any) => void;
   };
 }

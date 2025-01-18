@@ -1,5 +1,3 @@
-import { performanceMonitor } from './performance-monitor';
-
 interface CacheEntry<T> {
   value: T;
   timestamp: number;
@@ -58,7 +56,8 @@ class CacheManager {
       // Check cache first
       const cached = this.cache.get(key);
       if (cached && !this.isExpired(cached)) {
-        performanceMonitor.measure('cache-hit', startTime);
+        const duration = performance.now() - startTime;
+        console.debug(`Cache hit for ${key} in ${duration.toFixed(2)}ms`);
         return cached.value;
       }
 
@@ -70,7 +69,8 @@ class CacheManager {
       // Check for pending request
       const pending = this.pendingRequests.get(key);
       if (pending) {
-        performanceMonitor.measure('cache-pending', startTime);
+        const duration = performance.now() - startTime;
+        console.debug(`Cache pending for ${key} in ${duration.toFixed(2)}ms`);
         return pending;
       }
 
@@ -87,10 +87,12 @@ class CacheManager {
       });
 
       this.pendingRequests.set(key, request);
-      performanceMonitor.measure('cache-miss', startTime);
+      const duration = performance.now() - startTime;
+      console.debug(`Cache miss for ${key} in ${duration.toFixed(2)}ms`);
       return request;
     } catch (error) {
-      performanceMonitor.measure('cache-error', startTime);
+      const duration = performance.now() - startTime;
+      console.debug(`Cache error for ${key} in ${duration.toFixed(2)}ms`);
       throw error;
     }
   }

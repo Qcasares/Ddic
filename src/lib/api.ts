@@ -1,4 +1,4 @@
-import { Dictionary, Version, DictionaryEntry, AnalyticsMetrics, DictionaryActivity, PerformanceMetrics } from '@/types';
+import { Dictionary, Version, DictionaryEntry, AnalyticsMetrics } from '@/types';
 import { supabase } from './supabase';
 
 interface ApiResponse<T> {
@@ -66,6 +66,55 @@ export const api = {
 
         if (error) throw error;
         return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    import: async (dictionaryId: string, data: any[]): Promise<ApiResponse<void>> => {
+      try {
+        const { error } = await supabase
+          .from('dictionary_entries')
+          .insert(
+            data.map(entry => ({
+              dictionary_id: dictionaryId,
+              ...entry
+            }))
+          );
+
+        if (error) throw error;
+        return { data: null, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    },
+
+    export: async (dictionaryId: string, format: 'json' | 'csv'): Promise<ApiResponse<string>> => {
+      try {
+        const { data, error } = await supabase
+          .from('dictionary_entries')
+          .select('*')
+          .eq('dictionary_id', dictionaryId);
+
+        if (error) throw error;
+        
+        if (format === 'json') {
+          return { data: JSON.stringify(data, null, 2), error: null };
+        } else {
+          // Convert to CSV
+          const headers = Object.keys(data[0] || {}).join(',');
+          const rows = data.map(entry =>
+            Object.values(entry)
+              .map(value =>
+                typeof value === 'string' && value.includes(',')
+                  ? `"${value}"`
+                  : value
+              )
+              .join(',')
+          ).join('\n');
+          
+          return { data: `${headers}\n${rows}`, error: null };
+        }
       } catch (error) {
         return { data: null, error: error as Error };
       }
@@ -192,4 +241,12 @@ export function calculateQualityScore(entry: DictionaryEntry): number {
 
 export async function getActivityMetrics(dictionaryId: string) {
   return api.analytics.getActivityMetrics(dictionaryId);
+}
+
+export async function importDictionary(dictionaryId: string, data: any[]) {
+  return api.dictionaries.import(dictionaryId, data);
+}
+
+export async function exportDictionary(dictionaryId: string, format: 'json' | 'csv'): Promise<ApiResponse<string>> {
+  return api.dictionaries.export(dictionaryId, format);
 }

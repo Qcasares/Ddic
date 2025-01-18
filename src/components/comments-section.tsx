@@ -12,16 +12,23 @@ interface CommentsProps {
   entryId: string;
 }
 
+interface User {
+  email: string;
+}
+
 interface Comment {
   id: string;
   content: string;
   created_at: string;
   created_by: string;
   parent_id: string | null;
-  user: {
-    email: string;
-  };
+  user: User[];
   replies?: Comment[];
+}
+
+// Type guard to ensure single user
+function getSingleUser(users: User[] | undefined): User {
+  return (users && users[0]) || { email: '?' };
 }
 
 export function CommentsSection({ entryId }: CommentsProps) {
@@ -80,10 +87,17 @@ export function CommentsSection({ entryId }: CommentsProps) {
       if (error) throw error;
 
       // Organize comments into threads
-      const threads = data.reduce((acc: Comment[], comment) => {
+      const threads = data.reduce((acc: Comment[], comment: any) => {
         if (!comment.parent_id) {
-          comment.replies = data.filter(c => c.parent_id === comment.id);
-          acc.push(comment);
+          const typedComment: Comment = {
+            ...comment,
+            replies: data.filter(c => c.parent_id === comment.id).map(reply => ({
+              ...reply,
+              user: Array.isArray(reply.user) ? reply.user : [reply.user]
+            } as Comment)),
+            user: Array.isArray(comment.user) ? comment.user : [comment.user]
+          } as Comment;
+          acc.push(typedComment);
         }
         return acc;
       }, []);
@@ -216,13 +230,13 @@ export function CommentsSection({ entryId }: CommentsProps) {
                   <div className="flex gap-4">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback>
-                        {comment.user?.email?.charAt(0).toUpperCase() || '?'}
+                        {getSingleUser(comment.user).email.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{comment.user?.email}</span>
+                          <span className="font-medium">{getSingleUser(comment.user).email}</span>
                           <span className="text-sm text-muted-foreground">
                             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                           </span>
@@ -257,13 +271,13 @@ export function CommentsSection({ entryId }: CommentsProps) {
                         <div key={reply.id} className="flex gap-4">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback>
-                              {reply.user?.email?.charAt(0).toUpperCase() || '?'}
+                              {getSingleUser(reply.user).email.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium">{reply.user?.email}</span>
+                                <span className="font-medium">{getSingleUser(reply.user).email}</span>
                                 <span className="text-sm text-muted-foreground">
                                   {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
                                 </span>

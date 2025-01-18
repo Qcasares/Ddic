@@ -68,7 +68,7 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
       const validatedData = validateOrThrow(entrySchema, {
         ...formData,
         sample_values: formData.sample_values ? 
-          formData.sample_values.split(',').map(v => v.trim()) : 
+          formData.sample_values.split(',').map((v: string) => v.trim()) :
           [],
         metadata: formData.metadata?.reduce((acc, field) => ({
           ...acc,
@@ -140,7 +140,7 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
                 value={formData.field_name}
                 onChange={(e) => {
                   setFormData({ ...formData, field_name: e.target.value });
-                  setErrors(prev => ({ ...prev, field_name: undefined }));
+                  setErrors(prev => ({ ...prev, field_name: '' }));
                 }}
                 placeholder="Enter field name (e.g., user_id)"
                 className={errors.field_name ? 'border-destructive' : ''}
@@ -157,7 +157,7 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
                 value={formData.data_type} 
                 onValueChange={(value) => {
                   setFormData({ ...formData, data_type: value as typeof DATA_TYPES[number] });
-                  setErrors(prev => ({ ...prev, data_type: undefined }));
+                  setErrors(prev => ({ ...prev, data_type: '' }));
                 }}
                 disabled={isLoading}
               >
@@ -184,7 +184,7 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
                 value={formData.description}
                 onChange={(e) => {
                   setFormData({ ...formData, description: e.target.value });
-                  setErrors(prev => ({ ...prev, description: undefined }));
+                  setErrors(prev => ({ ...prev, description: '' }));
                 }}
                 placeholder="Enter field description"
                 className={errors.description ? 'border-destructive' : ''}
@@ -202,7 +202,7 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
                 value={formData.sample_values}
                 onChange={(e) => {
                   setFormData({ ...formData, sample_values: e.target.value });
-                  setErrors(prev => ({ ...prev, sample_values: undefined }));
+                  setErrors(prev => ({ ...prev, sample_values: '' }));
                 }}
                 placeholder="Enter comma-separated sample values"
                 disabled={isLoading}
@@ -216,7 +216,7 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
               metadata={formData.metadata}
               onChange={(metadata) => {
                 setFormData({ ...formData, metadata });
-                setErrors(prev => ({ ...prev, metadata: undefined }));
+                setErrors(prev => ({ ...prev, metadata: '' }));
               }}
               disabled={isLoading}
             />

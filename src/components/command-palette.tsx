@@ -8,12 +8,11 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  Book, 
-  History, 
-  Users2, 
+// Removed unused useNavigate import
+import {
+  Book,
+  History,
+  Users2,
   Settings,
   Database,
   FileText,

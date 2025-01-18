@@ -3,19 +3,14 @@ import * as d3 from 'd3';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Loader2, 
-  Wifi, 
-  WifiOff, 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCcw, 
-  Share2, 
+import {
+  Loader2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
   Info,
   ArrowUpRight,
-  Database,
   AlertTriangle,
-  Filter,
   Download,
   Maximize2,
   Layers
@@ -57,7 +52,7 @@ export function DataLineage({ dictionaryId }: DataLineageProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [data, setData] = useState<{ nodes: Node[]; links: Link[] }>({ nodes: [], links: [] });
   const [isLoading, setIsLoading] = useState(true);
-  const [zoom, setZoom] = useState(1);
+  // Removed unused zoom state
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [impactAnalysis, setImpactAnalysis] = useState<{
     upstream: string[];
@@ -232,7 +227,7 @@ export function DataLineage({ dictionaryId }: DataLineageProps) {
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
         container.attr('transform', event.transform);
-        setZoom(event.transform.k);
+        // Removed setZoom call
       });
 
     svg
@@ -297,7 +292,7 @@ export function DataLineage({ dictionaryId }: DataLineageProps) {
         }
       })
       .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', d => d.strength * 2)
+      .attr('stroke-width', (d: Link) => d.strength * 2)
       .attr('marker-end', d => `url(#arrow-${d.type})`)
       .on('mouseover', function(event, d) {
         d3.select(this)
@@ -312,12 +307,12 @@ export function DataLineage({ dictionaryId }: DataLineageProps) {
           .attr('y', y - 10)
           .attr('text-anchor', 'middle')
           .attr('fill', 'currentColor')
-          .text(d.description);
+          .text((d: any) => (d as Link).description || '');
       })
       .on('mouseout', function() {
         d3.select(this)
           .attr('stroke-opacity', 0.6)
-          .attr('stroke-width', d => d.strength * 2);
+          .attr('stroke-width', (d: any) => (d as Link).strength * 2);
         
         container.selectAll('.tooltip').remove();
       });
@@ -400,7 +395,7 @@ export function DataLineage({ dictionaryId }: DataLineageProps) {
           .select('circle')
           .transition()
           .duration(200)
-          .attr('r', d => d.type === 'system' ? 12 :
+          .attr('r', (d: any) => (d as Node).type === 'system' ? 12 :
                          d.impactScore ? 8 + (d.impactScore / 20) : 8);
 
         node.classed('opacity-50', false);
