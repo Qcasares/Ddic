@@ -6,6 +6,8 @@ interface ApiResponse<T> {
   error: Error | null;
 }
 
+import { QualityRule, QualityScore, qualityRuleEngine } from './quality-management';
+
 export const api = {
   auth: {
     getSession: async (): Promise<ApiResponse<{ user: any }>> => {
