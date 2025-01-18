@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Dictionary, Version, DictionaryEntry } from '@/types';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_KEY!
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
 interface ApiResponse<T> {
@@ -148,3 +148,7 @@ export const api = {
 export function calculateQualityScore(entry: DictionaryEntry): number {
   return api.quality.calculateQualityScore(entry);
 };
+
+export async function getActivityMetrics(dictionaryId: string) {
+  return api.analytics.getActivityMetrics(dictionaryId);
+}
