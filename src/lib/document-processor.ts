@@ -5,7 +5,7 @@ import {
     ProcessingResult, 
     ProcessingOptions 
 } from '../types';
-import natural from 'natural';
+import { TfIdf, WordTokenizer, BrillPOSTagger, Lexicon, RuleSet, NGrams } from 'natural';
 import { createWorker, Worker, createScheduler } from 'tesseract.js';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
@@ -15,29 +15,24 @@ interface NounPhrase {
     confidence: number;
 }
 
-interface TaggedToken {
-    token: string;
-    tag: string;
-}
-
 export class DocumentProcessor {
     private static instance: DocumentProcessor;
     private worker: Worker;
-    private tfidf: natural.TfIdf;
-    private wordTokenizer: natural.WordTokenizer;
-    private tagger: natural.BrillPOSTagger;
-    private lexicon: natural.Lexicon;
-    private ruleSet: natural.RuleSet;
+    private tfidf: TfIdf;
+    private wordTokenizer: WordTokenizer;
+    private tagger: BrillPOSTagger;
+    private lexicon: Lexicon;
+    private ruleSet: RuleSet;
 
     private constructor() {
         // Initialize natural language processing components
-        this.tfidf = new natural.TfIdf();
-        this.wordTokenizer = new natural.WordTokenizer();
+        this.tfidf = new TfIdf();
+        this.wordTokenizer = new WordTokenizer();
         
         // Initialize POS tagger with English lexicon and rule set
-        this.lexicon = new natural.Lexicon('EN', 'EC');
-        this.ruleSet = new natural.RuleSet('EN');
-        this.tagger = new natural.BrillPOSTagger(this.lexicon, this.ruleSet);
+        this.lexicon = new Lexicon('EN', 'EC');
+        this.ruleSet = new RuleSet('EN');
+        this.tagger = new BrillPOSTagger(this.lexicon, this.ruleSet);
         
         this.initializeWorker();
     }
@@ -203,8 +198,8 @@ export class DocumentProcessor {
         });
         
         // Extract phrases (bigrams and trigrams)
-        const bigrams = natural.NGrams.bigrams(tokens);
-        const trigrams = natural.NGrams.trigrams(tokens);
+        const bigrams = NGrams.bigrams(tokens);
+        const trigrams = NGrams.trigrams(tokens);
         
         [...bigrams, ...trigrams].forEach(gram => {
             const phrase = gram.join(' ');
@@ -236,7 +231,7 @@ export class DocumentProcessor {
             const tagged = this.tagger.tag(tokens);
             
             // Extract noun phrases and technical terms
-            const nounPhrases = this.extractNounPhrases(tagged.taggedWords);
+            const nounPhrases = this.extractNounPhrases(tagged.taggedWords, options);
             
             nounPhrases.forEach(phrase => {
                 terms.push({
@@ -253,7 +248,10 @@ export class DocumentProcessor {
         return terms;
     }
 
-    private extractNounPhrases(tagged: Array<{ token: string; tag: string }>): NounPhrase[] {
+    private extractNounPhrases(
+        tagged: Array<{ token: string; tag: string }>,
+        options: ProcessingOptions
+    ): NounPhrase[] {
         const phrases: NounPhrase[] = [];
         let currentPhrase: string[] = [];
         
@@ -265,7 +263,7 @@ export class DocumentProcessor {
             } else if (currentPhrase.length > 0) {
                 phrases.push({
                     text: currentPhrase.join(' '),
-                    confidence: 0.8 // Base confidence for ML-extracted terms
+                    confidence: options.minConfidence
                 });
                 currentPhrase = [];
             }
@@ -274,7 +272,7 @@ export class DocumentProcessor {
         if (currentPhrase.length > 0) {
             phrases.push({
                 text: currentPhrase.join(' '),
-                confidence: 0.8
+                confidence: options.minConfidence
             });
         }
         
