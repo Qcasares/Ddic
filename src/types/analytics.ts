@@ -1,6 +1,11 @@
 export interface MetricPoint {
   timestamp: string;
   value: number;
+  views?: number;
+  activeUsers?: number;
+  searches?: number;
+  loadTime?: number;
+  interactionTime?: number;
 }
 
 export interface ActivityMetrics {
@@ -20,9 +25,10 @@ export interface PerformanceMetrics {
 }
 
 export interface TrendMetrics {
-  daily: MetricPoint[];
-  weekly: MetricPoint[];
-  monthly: MetricPoint[];
+  day: MetricPoint[];
+  week: MetricPoint[];
+  month: MetricPoint[];
+  year: MetricPoint[];
 }
 
 export interface AnalyticsMetrics {
@@ -36,7 +42,7 @@ export interface AnalyticsMetrics {
   createdAt: string;
 }
 
-export type AnalyticsTimeframe = 'day' | 'week' | 'month' | 'year';
+export type AnalyticsTimeframe = keyof TrendMetrics;
 
 export interface AnalyticsFilter {
   timeframe: AnalyticsTimeframe;

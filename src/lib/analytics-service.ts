@@ -135,9 +135,10 @@ class AnalyticsService {
         errorRates: {},
       },
       trends: {
-        daily: [],
-        weekly: [],
-        monthly: [],
+        day: [],
+        week: [],
+        month: [],
+        year: []
       },
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -177,9 +178,10 @@ class AnalyticsService {
         errorRates: {},
       },
       trends: {
-        daily: [],
-        weekly: [],
-        monthly: [],
+        day: [],
+        week: [],
+        month: [],
+        year: []
       },
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
