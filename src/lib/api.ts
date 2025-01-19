@@ -1,12 +1,15 @@
 import { 
   Dictionary, 
   DictionaryEntry, 
-  AnalyticsMetrics
+  AnalyticsMetrics,
+  ProcessingResult,
+  ProcessingOptions
 } from '@/types';
 import { supabase } from './supabase';
 import {
   qualityRuleEngine
 } from './quality-management';
+import { documentProcessor } from './document-processor';
 
 export interface ApiResponse<T> {
   data: T | null;
@@ -113,6 +116,53 @@ export const api = {
     }
   },
 
+  documents: {
+    process: async (
+      file: File,
+      options: ProcessingOptions
+    ): Promise<ApiResponse<ProcessingResult>> => {
+      try {
+        const result = await documentProcessor.processDocument(file, options);
+        
+        // Store processing results in Supabase if needed
+        if (result.status === 'completed') {
+          const { error } = await supabase
+            .from('document_processing_results')
+            .insert({
+              document_id: result.documentId,
+              extracted_terms: result.extractedTerms,
+              processing_metrics: result.processingMetrics,
+              created_at: new Date().toISOString()
+            });
+
+          if (error) throw error;
+        }
+
+        return { data: result, error: null };
+      } catch (error) {
+        console.error('Document processing error:', error);
+        return { 
+          data: null, 
+          error: error instanceof Error ? error : new Error('Unknown error during document processing') 
+        };
+      }
+    },
+
+    getProcessingHistory: async (): Promise<ApiResponse<ProcessingResult[]>> => {
+      try {
+        const { data, error } = await supabase
+          .from('document_processing_results')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error: error as Error };
+      }
+    }
+  },
+
   analytics: {
     getActivityMetrics: async (dictionaryId: string): Promise<ApiResponse<AnalyticsMetrics>> => {
       try {
@@ -206,3 +256,5 @@ export const getActivityMetrics = api.analytics.getActivityMetrics;
 export const calculateQualityScore = api.quality.calculateQualityScore;
 export const importDictionary = api.dictionaries.import;
 export const exportDictionary = api.dictionaries.export;
+export const processDocument = api.documents.process;
+export const getProcessingHistory = api.documents.getProcessingHistory;
