@@ -1,29 +1,22 @@
-import { 
-    ProcessedDocument, 
-    DocumentMetadata, 
-    ExtractedTerm, 
-    ProcessingResult, 
-    ProcessingOptions 
+import {
+    ProcessedDocument,
+    DocumentMetadata,
+    ExtractedTerm,
+    ProcessingResult,
+    ProcessingOptions
 } from '../types';
-// Natural.js will be loaded dynamically
-let natural: any;
+import { TfIdf, WordTokenizer, NGrams } from './nlp';
+import './polyfills';
 import { createWorker, Worker, createScheduler } from 'tesseract.js';
-import pdfParse from 'pdf-parse';
+import * as pdfjs from 'pdfjs-dist';
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 import mammoth from 'mammoth';
-
-interface NounPhrase {
-    text: string;
-    confidence: number;
-}
 
 export class DocumentProcessor {
     private static instance: DocumentProcessor;
     private worker: Worker;
     private tfidf: any;
     private wordTokenizer: any;
-    private tagger: any;
-    private lexicon: any;
-    private ruleSet: any;
     private static initializationPromise: Promise<void>;
 
     private constructor() {
@@ -31,19 +24,16 @@ export class DocumentProcessor {
     }
 
     private async initialize(): Promise<void> {
-        // Dynamically import natural
-        natural = await import('natural');
-        
-        // Initialize natural language processing components
-        this.tfidf = new natural.TfIdf();
-        this.wordTokenizer = new natural.WordTokenizer();
-        
-        // Initialize POS tagger with English lexicon and rule set
-        this.lexicon = new natural.Lexicon('EN', 'EC');
-        this.ruleSet = new natural.RuleSet('EN');
-        this.tagger = new natural.BrillPOSTagger(this.lexicon, this.ruleSet);
-        
-        await this.initializeWorker();
+        try {
+            // Initialize NLP components using our custom implementation
+            this.tfidf = new TfIdf();
+            this.wordTokenizer = new WordTokenizer();
+            
+            await this.initializeWorker();
+        } catch (error) {
+            console.error('Error initializing DocumentProcessor:', error);
+            throw error;
+        }
     }
 
     public static async getInstance(): Promise<DocumentProcessor> {
@@ -113,10 +103,23 @@ export class DocumentProcessor {
         const buffer = await file.arrayBuffer();
         
         switch (file.type) {
-            case 'application/pdf':
+            case 'application/pdf': {
                 const uint8Array = new Uint8Array(buffer);
-                const pdfData = await pdfParse(uint8Array);
-                return pdfData.text;
+                const loadingTask = pdfjs.getDocument(uint8Array);
+                const pdf = await loadingTask.promise;
+                
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    const pageText = content.items
+                        .map(item => 'str' in item ? item.str : '')
+                        .filter(Boolean)
+                        .join(' ');
+                    fullText += pageText + '\n';
+                }
+                return fullText;
+            }
                 
             case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
                 const result = await mammoth.extractRawText({ arrayBuffer: buffer });
@@ -127,7 +130,6 @@ export class DocumentProcessor {
                 
             case 'image/png':
             case 'image/jpeg': {
-                // Convert ArrayBuffer to base64 for Tesseract.js
                 const uint8Array = new Uint8Array(buffer);
                 const base64 = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)));
                 const dataUrl = `data:${file.type};base64,${base64}`;
@@ -190,13 +192,14 @@ export class DocumentProcessor {
     ): Promise<ExtractedTerm[]> {
         const terms: ExtractedTerm[] = [];
         const tokens = this.wordTokenizer.tokenize(content);
+        const minConfidence = options.minConfidence || 0.1;
         
         if (!tokens) return terms;
 
         // Extract single words
         tokens.forEach((token: string, index: number) => {
             const tfidfScore = this.tfidf.tfidf(token, 0);
-            if (tfidfScore > options.minConfidence) {
+            if (tfidfScore > minConfidence) {
                 terms.push({
                     term: token,
                     context: this.getContext(content, index),
@@ -208,16 +211,15 @@ export class DocumentProcessor {
             }
         });
         
-        // Wait for natural to be initialized before using NGrams
-        const { NGrams } = natural;
+        // Use our custom NGrams implementation
         const bigrams = NGrams.bigrams(tokens);
         const trigrams = NGrams.trigrams(tokens);
         
-        [...(bigrams || []), ...(trigrams || [])].forEach(gram => {
+        [...bigrams, ...trigrams].forEach(gram => {
             const phrase = gram.join(' ');
             const tfidfScore = this.tfidf.tfidf(phrase, 0);
             
-            if (tfidfScore > options.minConfidence) {
+            if (tfidfScore > minConfidence) {
                 terms.push({
                     term: phrase,
                     context: this.getContext(content, tokens.indexOf(gram[0])),
@@ -237,58 +239,60 @@ export class DocumentProcessor {
         options: ProcessingOptions
     ): Promise<ExtractedTerm[]> {
         const terms: ExtractedTerm[] = [];
+        const minConfidence = options.minConfidence || 0.1;
         
         for (const sentence of sentences) {
             const tokens = this.wordTokenizer.tokenize(sentence) || [];
-            const tagged = this.tagger.tag(tokens);
             
-            // Extract noun phrases and technical terms
-            const nounPhrases = this.extractNounPhrases(tagged.taggedWords, options);
-            
-            nounPhrases.forEach(phrase => {
-                terms.push({
-                    term: phrase.text,
-                    context: sentence,
-                    confidence: phrase.confidence,
-                    frequency: 1, // Will be updated in ranking phase
-                    position: [sentences.indexOf(sentence)],
-                    type: this.classifyTerm(phrase.text)
-                });
-            });
+            // Use sliding window to find potential multi-word terms
+            for (let i = 0; i < tokens.length; i++) {
+                for (let j = 1; j <= 3 && i + j <= tokens.length; j++) {
+                    const phrase = tokens.slice(i, i + j).join(' ');
+                    
+                    // Simple heuristics for term detection
+                    if (this.isLikelyTerm(phrase)) {
+                        const confidence = this.calculateTermConfidence(phrase);
+                        if (confidence >= minConfidence) {
+                            terms.push({
+                                term: phrase,
+                                context: sentence,
+                                confidence,
+                                frequency: 1, // Will be updated in ranking phase
+                                position: [sentences.indexOf(sentence)],
+                                type: this.classifyTerm(phrase)
+                            });
+                        }
+                    }
+                }
+            }
         }
         
         return terms;
     }
 
-    private extractNounPhrases(
-        tagged: Array<{ token: string; tag: string }>,
-        options: ProcessingOptions
-    ): NounPhrase[] {
-        const phrases: NounPhrase[] = [];
-        let currentPhrase: string[] = [];
+    private isLikelyTerm(phrase: string): boolean {
+        // Check if the phrase matches common term patterns
+        const patterns = [
+            /^[A-Z][a-z]+$/, // Capitalized word
+            /^[A-Z][a-z]+(?:\s[A-Z][a-z]+)+$/, // Multiple capitalized words
+            /^[A-Z][a-z]*(?:[A-Z][a-z]*)*$/, // CamelCase
+            /\b(?:ROI|KPI|B2B|B2C|API|SDK|SaaS)\b/i, // Common acronyms
+            /^[a-z]+(?:\s[a-z]+){0,2}$/ // 1-3 lowercase words
+        ];
         
-        tagged.forEach((token) => {
-            if (token.tag.startsWith('NN')) { // Noun
-                currentPhrase.push(token.token);
-            } else if (token.tag === 'JJ' && currentPhrase.length > 0) { // Adjective
-                currentPhrase.push(token.token);
-            } else if (currentPhrase.length > 0) {
-                phrases.push({
-                    text: currentPhrase.join(' '),
-                    confidence: options.minConfidence
-                });
-                currentPhrase = [];
-            }
-        });
+        return patterns.some(pattern => pattern.test(phrase));
+    }
+
+    private calculateTermConfidence(phrase: string): number {
+        let confidence = 0.5; // Base confidence
         
-        if (currentPhrase.length > 0) {
-            phrases.push({
-                text: currentPhrase.join(' '),
-                confidence: options.minConfidence
-            });
-        }
+        // Increase confidence based on various factors
+        if (/^[A-Z]/.test(phrase)) confidence += 0.1; // Starts with capital
+        if (/[A-Z]{2,}/.test(phrase)) confidence += 0.1; // Contains acronym
+        if (phrase.includes(' ')) confidence += 0.1; // Multi-word term
+        if (/^[A-Z][a-z]*(?:[A-Z][a-z]*)*$/.test(phrase)) confidence += 0.2; // CamelCase
         
-        return phrases;
+        return Math.min(confidence, 1); // Cap at 1.0
     }
 
     private rankAndFilterTerms(
