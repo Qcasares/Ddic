@@ -5,7 +5,7 @@ import {
     ProcessingResult, 
     ProcessingOptions 
 } from '../types';
-import { TfIdf, WordTokenizer, BrillPOSTagger, Lexicon, RuleSet, NGrams } from 'natural';
+import * as natural from 'natural';
 import { createWorker, Worker, createScheduler } from 'tesseract.js';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
@@ -18,21 +18,21 @@ interface NounPhrase {
 export class DocumentProcessor {
     private static instance: DocumentProcessor;
     private worker: Worker;
-    private tfidf: TfIdf;
-    private wordTokenizer: WordTokenizer;
-    private tagger: BrillPOSTagger;
-    private lexicon: Lexicon;
-    private ruleSet: RuleSet;
+    private tfidf: natural.TfIdf;
+    private wordTokenizer: natural.WordTokenizer;
+    private tagger: natural.BrillPOSTagger;
+    private lexicon: natural.Lexicon;
+    private ruleSet: natural.RuleSet;
 
     private constructor() {
         // Initialize natural language processing components
-        this.tfidf = new TfIdf();
-        this.wordTokenizer = new WordTokenizer();
+        this.tfidf = new natural.TfIdf();
+        this.wordTokenizer = new natural.WordTokenizer();
         
         // Initialize POS tagger with English lexicon and rule set
-        this.lexicon = new Lexicon('EN', 'EC');
-        this.ruleSet = new RuleSet('EN');
-        this.tagger = new BrillPOSTagger(this.lexicon, this.ruleSet);
+        this.lexicon = new natural.Lexicon('EN', 'EC');
+        this.ruleSet = new natural.RuleSet('EN');
+        this.tagger = new natural.BrillPOSTagger(this.lexicon, this.ruleSet);
         
         this.initializeWorker();
     }

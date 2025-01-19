@@ -9,4 +9,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['natural'],
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
+  build: {
+    commonjsOptions: {
+      include: [/natural/, /node_modules/],
+      transformMixedEsModules: true
+    }
+  }
 });
