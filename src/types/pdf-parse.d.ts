@@ -11,6 +11,6 @@ declare module 'pdf-parse' {
         };
     }
 
-    function parse(dataBuffer: Buffer | ArrayBuffer): Promise<PDFData>;
+    function parse(dataBuffer: Buffer | ArrayBuffer | Uint8Array): Promise<PDFData>;
     export = parse;
 }

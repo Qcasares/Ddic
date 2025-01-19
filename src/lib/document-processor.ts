@@ -114,7 +114,8 @@ export class DocumentProcessor {
         
         switch (file.type) {
             case 'application/pdf':
-                const pdfData = await pdfParse(buffer);
+                const uint8Array = new Uint8Array(buffer);
+                const pdfData = await pdfParse(uint8Array);
                 return pdfData.text;
                 
             case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
@@ -207,11 +208,12 @@ export class DocumentProcessor {
             }
         });
         
-        // Extract phrases (bigrams and trigrams)
-        const bigrams = natural.NGrams.bigrams(tokens);
-        const trigrams = natural.NGrams.trigrams(tokens);
+        // Wait for natural to be initialized before using NGrams
+        const { NGrams } = natural;
+        const bigrams = NGrams.bigrams(tokens);
+        const trigrams = NGrams.trigrams(tokens);
         
-        [...bigrams, ...trigrams].forEach(gram => {
+        [...(bigrams || []), ...(trigrams || [])].forEach(gram => {
             const phrase = gram.join(' ');
             const tfidfScore = this.tfidf.tfidf(phrase, 0);
             
