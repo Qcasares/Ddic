@@ -122,7 +122,8 @@ export const api = {
       options: ProcessingOptions
     ): Promise<ApiResponse<ProcessingResult>> => {
       try {
-        const result = await documentProcessor.processDocument(file, options);
+        const processor = await documentProcessor;
+        const result = await processor.processDocument(file, options);
         
         // Store processing results in Supabase if needed
         if (result.status === 'completed') {

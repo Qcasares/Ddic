@@ -5,7 +5,8 @@ import {
     ProcessingResult, 
     ProcessingOptions 
 } from '../types';
-import * as natural from 'natural';
+// Natural.js will be loaded dynamically
+let natural: any;
 import { createWorker, Worker, createScheduler } from 'tesseract.js';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
@@ -18,13 +19,21 @@ interface NounPhrase {
 export class DocumentProcessor {
     private static instance: DocumentProcessor;
     private worker: Worker;
-    private tfidf: natural.TfIdf;
-    private wordTokenizer: natural.WordTokenizer;
-    private tagger: natural.BrillPOSTagger;
-    private lexicon: natural.Lexicon;
-    private ruleSet: natural.RuleSet;
+    private tfidf: any;
+    private wordTokenizer: any;
+    private tagger: any;
+    private lexicon: any;
+    private ruleSet: any;
+    private static initializationPromise: Promise<void>;
 
     private constructor() {
+        DocumentProcessor.initializationPromise = this.initialize();
+    }
+
+    private async initialize(): Promise<void> {
+        // Dynamically import natural
+        natural = await import('natural');
+        
         // Initialize natural language processing components
         this.tfidf = new natural.TfIdf();
         this.wordTokenizer = new natural.WordTokenizer();
@@ -34,12 +43,13 @@ export class DocumentProcessor {
         this.ruleSet = new natural.RuleSet('EN');
         this.tagger = new natural.BrillPOSTagger(this.lexicon, this.ruleSet);
         
-        this.initializeWorker();
+        await this.initializeWorker();
     }
 
-    public static getInstance(): DocumentProcessor {
+    public static async getInstance(): Promise<DocumentProcessor> {
         if (!DocumentProcessor.instance) {
             DocumentProcessor.instance = new DocumentProcessor();
+            await DocumentProcessor.initializationPromise;
         }
         return DocumentProcessor.instance;
     }
@@ -198,8 +208,8 @@ export class DocumentProcessor {
         });
         
         // Extract phrases (bigrams and trigrams)
-        const bigrams = NGrams.bigrams(tokens);
-        const trigrams = NGrams.trigrams(tokens);
+        const bigrams = natural.NGrams.bigrams(tokens);
+        const trigrams = natural.NGrams.trigrams(tokens);
         
         [...bigrams, ...trigrams].forEach(gram => {
             const phrase = gram.join(' ');
@@ -346,4 +356,6 @@ export class DocumentProcessor {
     }
 }
 
-export const documentProcessor = DocumentProcessor.getInstance();
+export const documentProcessor = (async () => {
+    return await DocumentProcessor.getInstance();
+})();
