@@ -3,10 +3,9 @@ import { Button } from '@/components/ui/button';
 import { ThemeProvider } from '@/features/shared/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { DatabaseIcon, BookOpen, Settings, LogOut, UserCircle, Activity } from 'lucide-react';
+import { DatabaseIcon, BookOpen, Settings, LogOut, UserCircle } from 'lucide-react';
 import { AuthCallbackHandler } from '@/features/auth/auth-callback-handler';
 import { DictionaryList } from '@/features/dictionaries/dictionary-list';
-import { PerformanceDashboard } from '@/features/performance/performance-dashboard';
 import { DictionaryView } from '@/features/dictionaries/dictionary-view';
 import { ProfileView } from '@/features/shared/profile-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,10 +83,6 @@ function AppContent() {
               <UserCircle className="h-4 w-4" />
               Profile
             </TabsTrigger>
-            <TabsTrigger value="performance" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Performance
-            </TabsTrigger>
           </TabsList>
           <TabsContent value="dictionaries">
             <div className="grid lg:grid-cols-12 gap-6">
@@ -116,9 +111,6 @@ function AppContent() {
           </TabsContent>
           <TabsContent value="profile">
             <ProfileView />
-          </TabsContent>
-          <TabsContent value="performance">
-            <PerformanceDashboard />
           </TabsContent>
         </Tabs>
       </main>

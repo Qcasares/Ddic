@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DataLineage } from '@/components/data-lineage';
-import { QualityDashboard } from '@/features/analytics/quality-dashboard';
-import { AnalyticsDashboard } from '@/features/analytics/analytics-dashboard';
 import { ApprovalQueue } from '@/components/approval-queue';
 import { BusinessGlossary } from '@/components/business-glossary';
 import { VersionHistory } from '@/components/version-history';
@@ -34,18 +32,6 @@ export function DictionaryView({ dictionaryId }: DictionaryViewProps) {
           className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
         >
           Data Lineage
-        </TabsTrigger>
-        <TabsTrigger 
-          value="quality"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Quality
-        </TabsTrigger>
-        <TabsTrigger 
-          value="analytics"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Analytics
         </TabsTrigger>
         <TabsTrigger 
           value="approvals"
@@ -82,14 +68,6 @@ export function DictionaryView({ dictionaryId }: DictionaryViewProps) {
 
       <TabsContent value="lineage">
         <DataLineage dictionaryId={dictionaryId} />
-      </TabsContent>
-
-      <TabsContent value="quality">
-        <QualityDashboard dictionaryId={dictionaryId} />
-      </TabsContent>
-
-      <TabsContent value="analytics">
-        <AnalyticsDashboard dictionaryId={dictionaryId} />
       </TabsContent>
 
       <TabsContent value="approvals">

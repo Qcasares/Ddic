@@ -2,7 +2,6 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { performanceMonitor } from '@/features/performance/performance-monitor';
 import { requestBatcher } from './request-batcher';
 
 interface Props {
@@ -56,10 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
         metadata: {
           url: window.location.href,
           userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
-          performanceMetrics: performanceMonitor.getMetrics({
-            startTime: Date.now() - 60000 // Last minute of metrics
-          })
+          timestamp: new Date().toISOString()
         }
       }, 'high');
     } catch (reportError) {

@@ -41,24 +41,6 @@ export interface VersionHistoryProps {
     dictionaryId: string;
 }
 
-export interface AnalyticsMetrics {
-    totalEntries: number;
-    totalChanges: number;
-    lastUpdated: string;
-    changeFrequency: number;
-    performance: {
-        avgLoadTime: number;
-        avgInteractionTime: number;
-        deviceTypes: Record<string, number>;
-    };
-    activity: {
-        views: number;
-        edits: number;
-        searches: number;
-        activeUsers: number;
-    };
-}
-
 export interface DatabaseQualityRule {
     id: string;
     dictionary_id: string;

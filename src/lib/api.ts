@@ -1,7 +1,6 @@
-import { 
-  Dictionary, 
-  DictionaryEntry, 
-  AnalyticsMetrics,
+import {
+  Dictionary,
+  DictionaryEntry,
   ProcessingResult,
   ProcessingOptions
 } from '@/types';
@@ -164,86 +163,6 @@ export const api = {
     }
   },
 
-  analytics: {
-    getActivityMetrics: async (dictionaryId: string): Promise<ApiResponse<AnalyticsMetrics>> => {
-      try {
-        const activityPromise = supabase
-          .from('dictionary_activity')
-          .select('views, edits, searches, active_users')
-          .eq('dictionary_id', dictionaryId)
-          .single();
-
-        const entriesPromise = supabase
-          .from('dictionary_entries')
-          .select('count', { count: 'exact', head: true })
-          .eq('dictionary_id', dictionaryId);
-
-        const lastUpdatePromise = supabase
-          .from('dictionary_entries')
-          .select('updated_at')
-          .eq('dictionary_id', dictionaryId)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        const performancePromise = supabase
-          .from('performance_metrics')
-          .select('load_time, interaction_time, device_type')
-          .eq('dictionary_id', dictionaryId);
-
-        const [activity, entries, lastUpdate, performance] = await Promise.all([
-          activityPromise,
-          entriesPromise,
-          lastUpdatePromise,
-          performancePromise
-        ]);
-
-        if (activity.error) throw activity.error;
-        if (entries.error) throw entries.error;
-        if (lastUpdate.error) throw lastUpdate.error;
-        if (performance.error) throw performance.error;
-
-        const avgLoadTime = performance.data.length > 0
-          ? performance.data.reduce((sum, p) => sum + p.load_time, 0) / performance.data.length
-          : 0;
-
-        const avgInteractionTime = performance.data.length > 0
-          ? performance.data.reduce((sum, p) => sum + p.interaction_time, 0) / performance.data.length
-          : 0;
-
-        const deviceTypes = performance.data.reduce((acc, p) => {
-          acc[p.device_type] = (acc[p.device_type] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const activityData = activity.data || { views: 0, edits: 0, searches: 0, active_users: 0 };
-
-        return {
-          data: {
-            totalEntries: entries.count || 0,
-            totalChanges: activityData.edits,
-            lastUpdated: lastUpdate.data?.updated_at || new Date().toISOString(),
-            changeFrequency: activityData.views > 0 ? activityData.edits / activityData.views : 0,
-            performance: {
-              avgLoadTime,
-              avgInteractionTime,
-              deviceTypes
-            },
-            activity: {
-              views: activityData.views,
-              edits: activityData.edits,
-              searches: activityData.searches,
-              activeUsers: activityData.active_users
-            }
-          },
-          error: null
-        };
-      } catch (error) {
-        return { data: null, error: error as Error };
-      }
-    }
-  },
-
   quality: {
     calculateQualityScore: async (entry: DictionaryEntry): Promise<number> => {
       const score = await qualityRuleEngine.evaluateEntry(entry);
@@ -253,7 +172,6 @@ export const api = {
 };
 
 // Exported functions for direct use
-export const getActivityMetrics = api.analytics.getActivityMetrics;
 export const calculateQualityScore = api.quality.calculateQualityScore;
 export const importDictionary = api.dictionaries.import;
 export const exportDictionary = api.dictionaries.export;
