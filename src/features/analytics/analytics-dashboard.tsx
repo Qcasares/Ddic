@@ -9,7 +9,6 @@ import {
   BarChart,
   Activity,
   Clock,
-  GitBranch,
   Eye,
   Search,
   Users,
@@ -18,7 +17,7 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import {
   LineChart,
   Line,
