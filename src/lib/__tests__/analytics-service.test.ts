@@ -6,7 +6,13 @@ import type { AnalyticsEvent } from '@/types/analytics';
 jest.mock('../supabase', () => ({
   supabase: {
     from: jest.fn().mockReturnValue({
-      insert: jest.fn().mockResolvedValue({ error: null }),
+      insert: jest.fn().mockResolvedValue({
+        data: null,
+        count: null,
+        status: 201,
+        statusText: 'Created',
+        error: null
+      }),
       select: jest.fn().mockResolvedValue({ data: [], error: null }),
     }),
     rpc: jest.fn().mockResolvedValue({
@@ -102,7 +108,13 @@ describe('AnalyticsService', () => {
 
       jest.spyOn(supabase.from('analytics_events'), 'insert')
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({ error: null });
+        .mockResolvedValueOnce({
+          data: null,
+          count: null,
+          status: 201,
+          statusText: 'Created',
+          error: null
+        });
 
       await analyticsService.trackEvent(event);
 

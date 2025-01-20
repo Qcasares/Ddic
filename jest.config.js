@@ -1,5 +1,5 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
-export default {
+const config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   moduleNameMapper: {
@@ -12,7 +12,11 @@ export default {
       tsconfig: 'tsconfig.json',
       useESM: true,
     }],
+    '^.+\\.jsx?$': 'babel-jest',
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(@testing-library|@babel)/)',
+  ],
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   testMatch: [
     '**/__tests__/**/*.test.[jt]s?(x)',
@@ -37,4 +41,6 @@ export default {
       useESM: true,
     },
   },
-};
+}
+
+module.exports = config;
