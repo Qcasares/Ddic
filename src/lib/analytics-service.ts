@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
-import { AnalyticsMetrics, AnalyticsFilter, AnalyticsEvent } from '@/types/analytics';
+import {
+  AnalyticsMetrics,
+  AnalyticsFilter,
+  AnalyticsEvent,
+  TrendMetrics,
+  MetricPoint
+} from '@/types/analytics';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -102,30 +108,74 @@ class AnalyticsService {
     dictionaryId: string,
     filter?: AnalyticsFilter
   ): Promise<AnalyticsMetrics> {
-    const startDate = filter?.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const endDate = filter?.endDate || new Date().toISOString();
+    const timeframes: { [K in keyof TrendMetrics]: Date } = {
+      day: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      week: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      month: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      year: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    };
 
-    const { data, error } = await supabase
-      .rpc('get_dictionary_metrics', {
-        p_dictionary_id: dictionaryId,
-        p_start_date: startDate,
-        p_end_date: endDate
-      });
+    const endDate = new Date();
 
-    if (error) throw error;
+    // Fetch daily metrics for all timeframes
+    const dailyMetricsPromises = Object.entries(timeframes).map(async ([timeframe, startDate]) => {
+      const { data, error } = await supabase
+        .from('daily_metrics')
+        .select('*')
+        .eq('dictionary_id', dictionaryId)
+        .gte('day', startDate.toISOString())
+        .lte('day', endDate.toISOString())
+        .order('day', { ascending: true });
 
-    // Transform the data into the expected format
+      if (error) throw error;
+      return { timeframe, data: data || [] };
+    });
+
+    const allMetrics = await Promise.all(dailyMetricsPromises);
+    const metricsByTimeframe = new Map(
+      allMetrics.map(({ timeframe, data }) => [
+        timeframe,
+        data.map((metric: any): MetricPoint => ({
+          timestamp: metric.day,
+          value: metric.total_events || 0,
+          views: metric.views || 0,
+          activeUsers: metric.unique_users || 0,
+          searches: metric.searches || 0,
+          loadTime: 0,
+          interactionTime: 0
+        }))
+      ])
+    );
+
+    const trends: TrendMetrics = {
+      day: metricsByTimeframe.get('day') || [],
+      week: metricsByTimeframe.get('week') || [],
+      month: metricsByTimeframe.get('month') || [],
+      year: metricsByTimeframe.get('year') || []
+    };
+
+    // Get current totals from the latest timeframe data
+    const currentTimeframe = filter?.timeframe || 'month';
+    const latestMetrics = allMetrics.find(m => m.timeframe === currentTimeframe)?.data || [];
+    const totals = latestMetrics.reduce((acc: any, curr: any) => ({
+      views: (acc.views || 0) + (curr.views || 0),
+      edits: (acc.edits || 0) + (curr.edits || 0),
+      searches: (acc.searches || 0) + (curr.searches || 0),
+      unique_users: Math.max(acc.unique_users || 0, curr.unique_users || 0),
+      total_events: (acc.total_events || 0) + (curr.total_events || 0)
+    }), {});
+
     return {
       id: dictionaryId,
       dictionaryId,
-      totalEntries: data.total_events || 0,
+      totalEntries: totals.total_events || 0,
       activity: {
-        views: data.views || 0,
-        edits: data.edits || 0,
-        searches: data.searches || 0,
-        activeUsers: data.unique_users || 0,
-        uniqueVisitors: data.unique_users || 0,
-        averageSessionDuration: 0, // Calculate from session data
+        views: totals.views || 0,
+        edits: totals.edits || 0,
+        searches: totals.searches || 0,
+        activeUsers: totals.unique_users || 0,
+        uniqueVisitors: totals.unique_users || 0,
+        averageSessionDuration: 0,
       },
       performance: {
         avgLoadTime: 0,
@@ -133,12 +183,7 @@ class AnalyticsService {
         deviceTypes: {},
         errorRates: {},
       },
-      trends: {
-        day: [],
-        week: [],
-        month: [],
-        year: []
-      },
+      trends,
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };

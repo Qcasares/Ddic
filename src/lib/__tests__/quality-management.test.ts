@@ -4,10 +4,12 @@ import type { DictionaryEntry } from '@/types';
 
 // Mock crypto.randomUUID
 const mockUUID = '12345678-1234-1234-1234-123456789012';
-global.crypto = {
-  ...global.crypto,
-  randomUUID: () => mockUUID,
-};
+beforeAll(() => {
+  Object.defineProperty(global.crypto, 'randomUUID', {
+    value: () => mockUUID,
+    configurable: true,
+  });
+});
 
 // Mock Supabase client
 jest.mock('../supabase', () => ({
@@ -16,7 +18,7 @@ jest.mock('../supabase', () => ({
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockResolvedValue({
         data: [],
-        error: null
+        error: null,
       }),
       upsert: jest.fn().mockResolvedValue({
         data: null,
@@ -149,7 +151,8 @@ describe('QualityRuleEngine', () => {
 
   describe('Required Field Rules', () => {
     it('should pass when required field is present', async () => {
-      const score = await qualityRuleEngine.evaluateEntry(mockEntry);
+      const entry = { ...mockEntry, examples: ['Example 1'] };
+      const score = await qualityRuleEngine.evaluateEntry(entry);
       const requiredFieldRule = score.failedRules.find(r => r.ruleId === 'rule-1');
       expect(requiredFieldRule).toBeUndefined();
       expect(score.dimensionScores.completeness).toBeGreaterThan(0);
@@ -157,15 +160,14 @@ describe('QualityRuleEngine', () => {
 
     it('should fail when optional required field is missing', async () => {
       const score = await qualityRuleEngine.evaluateEntry(mockEntry);
-      // examples is an optional field that our rule requires
       const requiredFieldRule = score.failedRules.find(r => r.ruleId === 'rule-1');
       expect(requiredFieldRule).toBeDefined();
       expect(requiredFieldRule?.reason).toContain('missing');
     });
 
     it('should fail when field is empty and empty not allowed', async () => {
-      const invalidEntry = { ...mockEntry, term: '' };
-      const score = await qualityRuleEngine.evaluateEntry(invalidEntry);
+      const entry = { ...mockEntry, examples: [] };
+      const score = await qualityRuleEngine.evaluateEntry(entry);
       const requiredFieldRule = score.failedRules.find(r => r.ruleId === 'rule-1');
       expect(requiredFieldRule).toBeDefined();
       expect(requiredFieldRule?.reason).toContain('empty');
@@ -254,7 +256,6 @@ describe('QualityRuleEngine', () => {
         updatedAt: '2025-01-20T09:00:00.000Z',
       }));
 
-      // Mock loading format rules
       const mockFormatRulesData = formatRules.map(rule => ({
         id: rule.id,
         dictionary_id: rule.dictionaryId,
@@ -309,12 +310,12 @@ describe('QualityRuleEngine', () => {
     });
 
     it('should handle database errors when saving scores', async () => {
-      (supabase.from as jest.Mock).mockImplementationOnce(() => ({
+      (supabase.from as jest.Mock).mockReturnValueOnce({
         upsert: jest.fn().mockResolvedValue({
           data: null,
           error: new Error('Database error'),
         }),
-      }));
+      });
 
       await expect(qualityRuleEngine.evaluateEntry(mockEntry)).rejects.toThrow();
     });
