@@ -102,7 +102,6 @@ class AnalyticsService {
     dictionaryId: string,
     filter?: AnalyticsFilter
   ): Promise<AnalyticsMetrics> {
-    const timeframe = filter?.timeframe || 'day';
     const startDate = filter?.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = filter?.endDate || new Date().toISOString();
 
