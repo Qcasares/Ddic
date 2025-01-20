@@ -99,19 +99,74 @@ RETURNS TABLE (
     total_events bigint,
     views bigint,
     edits bigint,
-    searches bigint
+    searches bigint,
+    period_start timestamp with time zone
 ) AS $$
 BEGIN
+    -- Return data for different timeframes
     RETURN QUERY
+    
+    -- Daily data (last 24 hours)
     SELECT
-        'daily' as timeframe,
+        'day' as timeframe,
         sum(unique_users) as unique_users,
         sum(total_events) as total_events,
         sum(views) as views,
         sum(edits) as edits,
-        sum(searches) as searches
+        sum(searches) as searches,
+        date_trunc('day', day) as period_start
     FROM public.daily_metrics
     WHERE dictionary_id = p_dictionary_id
-    AND day BETWEEN p_start_date AND p_end_date;
+    AND day >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+    GROUP BY date_trunc('day', day)
+    
+    UNION ALL
+    
+    -- Weekly data (last 7 days)
+    SELECT
+        'week' as timeframe,
+        sum(unique_users) as unique_users,
+        sum(total_events) as total_events,
+        sum(views) as views,
+        sum(edits) as edits,
+        sum(searches) as searches,
+        date_trunc('day', day) as period_start
+    FROM public.daily_metrics
+    WHERE dictionary_id = p_dictionary_id
+    AND day >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+    GROUP BY date_trunc('day', day)
+    
+    UNION ALL
+    
+    -- Monthly data (last 30 days)
+    SELECT
+        'month' as timeframe,
+        sum(unique_users) as unique_users,
+        sum(total_events) as total_events,
+        sum(views) as views,
+        sum(edits) as edits,
+        sum(searches) as searches,
+        date_trunc('day', day) as period_start
+    FROM public.daily_metrics
+    WHERE dictionary_id = p_dictionary_id
+    AND day >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+    GROUP BY date_trunc('day', day)
+    
+    UNION ALL
+    
+    -- Yearly data (last 365 days)
+    SELECT
+        'year' as timeframe,
+        sum(unique_users) as unique_users,
+        sum(total_events) as total_events,
+        sum(views) as views,
+        sum(edits) as edits,
+        sum(searches) as searches,
+        date_trunc('day', day) as period_start
+    FROM public.daily_metrics
+    WHERE dictionary_id = p_dictionary_id
+    AND day >= CURRENT_TIMESTAMP - INTERVAL '365 days'
+    GROUP BY date_trunc('day', day)
+    ORDER BY timeframe, period_start;
 END;
 $$ LANGUAGE plpgsql;

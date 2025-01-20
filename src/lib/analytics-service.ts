@@ -1,10 +1,10 @@
 import { supabase } from './supabase';
-import {
-  AnalyticsMetrics,
-  AnalyticsFilter,
-  AnalyticsEvent,
+import { 
+  AnalyticsMetrics, 
+  AnalyticsFilter, 
+  AnalyticsEvent, 
   TrendMetrics,
-  MetricPoint
+  MetricPoint 
 } from '@/types/analytics';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -108,73 +108,57 @@ class AnalyticsService {
     dictionaryId: string,
     filter?: AnalyticsFilter
   ): Promise<AnalyticsMetrics> {
-    const timeframes: { [K in keyof TrendMetrics]: Date } = {
-      day: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      week: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      month: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      year: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    const { data: metricsData, error } = await supabase
+      .rpc('get_dictionary_metrics', {
+        p_dictionary_id: dictionaryId,
+        p_start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+        p_end_date: new Date().toISOString()
+      });
+
+    if (error) throw error;
+
+    const trends: TrendMetrics = {
+      day: [],
+      week: [],
+      month: [],
+      year: []
     };
 
-    const endDate = new Date();
-
-    // Fetch daily metrics for all timeframes
-    const dailyMetricsPromises = Object.entries(timeframes).map(async ([timeframe, startDate]) => {
-      const { data, error } = await supabase
-        .from('daily_metrics')
-        .select('*')
-        .eq('dictionary_id', dictionaryId)
-        .gte('day', startDate.toISOString())
-        .lte('day', endDate.toISOString())
-        .order('day', { ascending: true });
-
-      if (error) throw error;
-      return { timeframe, data: data || [] };
-    });
-
-    const allMetrics = await Promise.all(dailyMetricsPromises);
-    const metricsByTimeframe = new Map(
-      allMetrics.map(({ timeframe, data }) => [
-        timeframe,
-        data.map((metric: any): MetricPoint => ({
-          timestamp: metric.day,
+    // Group and transform metrics by timeframe
+    metricsData?.forEach((metric: any) => {
+      if (trends[metric.timeframe as keyof TrendMetrics]) {
+        trends[metric.timeframe as keyof TrendMetrics].push({
+          timestamp: metric.period_start,
           value: metric.total_events || 0,
           views: metric.views || 0,
           activeUsers: metric.unique_users || 0,
           searches: metric.searches || 0,
           loadTime: 0,
           interactionTime: 0
-        }))
-      ])
-    );
+        });
+      }
+    });
 
-    const trends: TrendMetrics = {
-      day: metricsByTimeframe.get('day') || [],
-      week: metricsByTimeframe.get('week') || [],
-      month: metricsByTimeframe.get('month') || [],
-      year: metricsByTimeframe.get('year') || []
-    };
-
-    // Get current totals from the latest timeframe data
+    // Get current totals from the latest data point in the selected timeframe
     const currentTimeframe = filter?.timeframe || 'month';
-    const latestMetrics = allMetrics.find(m => m.timeframe === currentTimeframe)?.data || [];
-    const totals = latestMetrics.reduce((acc: any, curr: any) => ({
-      views: (acc.views || 0) + (curr.views || 0),
-      edits: (acc.edits || 0) + (curr.edits || 0),
-      searches: (acc.searches || 0) + (curr.searches || 0),
-      unique_users: Math.max(acc.unique_users || 0, curr.unique_users || 0),
-      total_events: (acc.total_events || 0) + (curr.total_events || 0)
-    }), {});
+    const currentMetrics = metricsData?.filter((m: any) => m.timeframe === currentTimeframe)
+      .reduce((latest: any, current: any) => {
+        if (!latest || new Date(current.period_start) > new Date(latest.period_start)) {
+          return current;
+        }
+        return latest;
+      }, null) || {};
 
     return {
       id: dictionaryId,
       dictionaryId,
-      totalEntries: totals.total_events || 0,
+      totalEntries: currentMetrics.total_events || 0,
       activity: {
-        views: totals.views || 0,
-        edits: totals.edits || 0,
-        searches: totals.searches || 0,
-        activeUsers: totals.unique_users || 0,
-        uniqueVisitors: totals.unique_users || 0,
+        views: currentMetrics.views || 0,
+        edits: currentMetrics.edits || 0,
+        searches: currentMetrics.searches || 0,
+        activeUsers: currentMetrics.unique_users || 0,
+        uniqueVisitors: currentMetrics.unique_users || 0,
         averageSessionDuration: 0,
       },
       performance: {
