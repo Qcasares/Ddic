@@ -50,14 +50,10 @@ class CacheManager {
     fetcher: () => Promise<T>,
     ttl: number = this.defaultTTL
   ): Promise<T> {
-    const startTime = performance.now();
-
     try {
       // Check cache first
       const cached = this.cache.get(key);
       if (cached && !this.isExpired(cached)) {
-        const duration = performance.now() - startTime;
-        console.debug(`Cache hit for ${key} in ${duration.toFixed(2)}ms`);
         return cached.value;
       }
 
@@ -69,8 +65,6 @@ class CacheManager {
       // Check for pending request
       const pending = this.pendingRequests.get(key);
       if (pending) {
-        const duration = performance.now() - startTime;
-        console.debug(`Cache pending for ${key} in ${duration.toFixed(2)}ms`);
         return pending;
       }
 
@@ -87,12 +81,8 @@ class CacheManager {
       });
 
       this.pendingRequests.set(key, request);
-      const duration = performance.now() - startTime;
-      console.debug(`Cache miss for ${key} in ${duration.toFixed(2)}ms`);
       return request;
     } catch (error) {
-      const duration = performance.now() - startTime;
-      console.debug(`Cache error for ${key} in ${duration.toFixed(2)}ms`);
       throw error;
     }
   }

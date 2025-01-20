@@ -29,12 +29,11 @@ interface LoggerConfig {
 }
 
 /**
- * Application logger with context support and performance tracking
+ * Application logger with context support
  */
 export class Logger {
     private static instance: Logger;
     private readonly config: LoggerConfig;
-    private readonly timers: Map<string, number> = new Map();
 
     private constructor(config: LoggerConfig) {
         this.config = {
@@ -55,28 +54,6 @@ export class Logger {
             throw new Error('Logger not initialized. Call initialize() first.');
         }
         return Logger.instance;
-    }
-
-    /**
-     * Start timing an operation
-     */
-    startTimer(operation: string): void {
-        this.timers.set(operation, performance.now());
-    }
-
-    /**
-     * End timing an operation and log the duration
-     */
-    endTimer(operation: string, context?: Record<string, unknown>): void {
-        const startTime = this.timers.get(operation);
-        if (startTime) {
-            const duration = performance.now() - startTime;
-            this.info(`Operation ${operation} completed`, {
-                ...context,
-                durationMs: duration
-            });
-            this.timers.delete(operation);
-        }
     }
 
     /**
