@@ -87,6 +87,10 @@ AFTER INSERT OR UPDATE OR DELETE ON public.analytics_events
 FOR EACH STATEMENT
 EXECUTE FUNCTION refresh_analytics_views();
 
+-- Refresh views initially
+REFRESH MATERIALIZED VIEW CONCURRENTLY public.daily_metrics;
+REFRESH MATERIALIZED VIEW CONCURRENTLY public.monthly_metrics;
+
 -- Create helper function for aggregated metrics
 CREATE OR REPLACE FUNCTION get_dictionary_metrics(
     p_dictionary_id uuid,
