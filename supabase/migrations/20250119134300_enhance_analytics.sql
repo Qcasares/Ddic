@@ -116,71 +116,92 @@ RETURNS TABLE (
     searches bigint,
     period_start timestamp with time zone
 ) AS $$
+DECLARE
+    v_result RECORD;
 BEGIN
     -- Return data for different timeframes
     RETURN QUERY
     
-    -- Daily data (last 24 hours)
+    WITH aggregated_metrics AS (
+        -- Daily data (last 24 hours)
+        SELECT
+            'day'::text as metric_timeframe,
+            COALESCE(sum(dm.unique_users), 0)::bigint as metric_users,
+            COALESCE(sum(dm.total_events), 0)::bigint as metric_events,
+            COALESCE(sum(dm.views), 0)::bigint as metric_views,
+            COALESCE(sum(dm.edits), 0)::bigint as metric_edits,
+            COALESCE(sum(dm.searches), 0)::bigint as metric_searches,
+            date_trunc('day', dm.day) as metric_period_start
+        FROM public.daily_metrics dm
+        WHERE dm.dictionary_id = p_dictionary_id
+        AND dm.day >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+        GROUP BY date_trunc('day', dm.day)
+        
+        UNION ALL
+        
+        -- Weekly data (last 7 days)
+        SELECT
+            'week'::text as metric_timeframe,
+            COALESCE(sum(dm.unique_users), 0)::bigint as metric_users,
+            COALESCE(sum(dm.total_events), 0)::bigint as metric_events,
+            COALESCE(sum(dm.views), 0)::bigint as metric_views,
+            COALESCE(sum(dm.edits), 0)::bigint as metric_edits,
+            COALESCE(sum(dm.searches), 0)::bigint as metric_searches,
+            date_trunc('day', dm.day) as metric_period_start
+        FROM public.daily_metrics dm
+        WHERE dm.dictionary_id = p_dictionary_id
+        AND dm.day >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+        GROUP BY date_trunc('day', dm.day)
+        
+        UNION ALL
+        
+        -- Monthly data (last 30 days)
+        SELECT
+            'month'::text as metric_timeframe,
+            COALESCE(sum(dm.unique_users), 0)::bigint as metric_users,
+            COALESCE(sum(dm.total_events), 0)::bigint as metric_events,
+            COALESCE(sum(dm.views), 0)::bigint as metric_views,
+            COALESCE(sum(dm.edits), 0)::bigint as metric_edits,
+            COALESCE(sum(dm.searches), 0)::bigint as metric_searches,
+            date_trunc('day', dm.day) as metric_period_start
+        FROM public.daily_metrics dm
+        WHERE dm.dictionary_id = p_dictionary_id
+        AND dm.day >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+        GROUP BY date_trunc('day', dm.day)
+        
+        UNION ALL
+        
+        -- Yearly data (last 365 days)
+        SELECT
+            'year'::text as metric_timeframe,
+            COALESCE(sum(dm.unique_users), 0)::bigint as metric_users,
+            COALESCE(sum(dm.total_events), 0)::bigint as metric_events,
+            COALESCE(sum(dm.views), 0)::bigint as metric_views,
+            COALESCE(sum(dm.edits), 0)::bigint as metric_edits,
+            COALESCE(sum(dm.searches), 0)::bigint as metric_searches,
+            date_trunc('day', dm.day) as metric_period_start
+        FROM public.daily_metrics dm
+        WHERE dm.dictionary_id = p_dictionary_id
+        AND dm.day >= CURRENT_TIMESTAMP - INTERVAL '365 days'
+        GROUP BY date_trunc('day', dm.day)
+    )
     SELECT
-        'day' as timeframe,
-        sum(unique_users) as unique_users,
-        sum(total_events) as total_events,
-        sum(views) as views,
-        sum(edits) as edits,
-        sum(searches) as searches,
-        date_trunc('day', day) as period_start
-    FROM public.daily_metrics
-    WHERE dictionary_id = p_dictionary_id
-    AND day >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
-    GROUP BY date_trunc('day', day)
-    
-    UNION ALL
-    
-    -- Weekly data (last 7 days)
-    SELECT
-        'week' as timeframe,
-        sum(unique_users) as unique_users,
-        sum(total_events) as total_events,
-        sum(views) as views,
-        sum(edits) as edits,
-        sum(searches) as searches,
-        date_trunc('day', day) as period_start
-    FROM public.daily_metrics
-    WHERE dictionary_id = p_dictionary_id
-    AND day >= CURRENT_TIMESTAMP - INTERVAL '7 days'
-    GROUP BY date_trunc('day', day)
-    
-    UNION ALL
-    
-    -- Monthly data (last 30 days)
-    SELECT
-        'month' as timeframe,
-        sum(unique_users) as unique_users,
-        sum(total_events) as total_events,
-        sum(views) as views,
-        sum(edits) as edits,
-        sum(searches) as searches,
-        date_trunc('day', day) as period_start
-    FROM public.daily_metrics
-    WHERE dictionary_id = p_dictionary_id
-    AND day >= CURRENT_TIMESTAMP - INTERVAL '30 days'
-    GROUP BY date_trunc('day', day)
-    
-    UNION ALL
-    
-    -- Yearly data (last 365 days)
-    SELECT
-        'year' as timeframe,
-        sum(unique_users) as unique_users,
-        sum(total_events) as total_events,
-        sum(views) as views,
-        sum(edits) as edits,
-        sum(searches) as searches,
-        date_trunc('day', day) as period_start
-    FROM public.daily_metrics
-    WHERE dictionary_id = p_dictionary_id
-    AND day >= CURRENT_TIMESTAMP - INTERVAL '365 days'
-    GROUP BY date_trunc('day', day)
+        am.metric_timeframe as timeframe,
+        am.metric_users as unique_users,
+        am.metric_events as total_events,
+        am.metric_views as views,
+        am.metric_edits as edits,
+        am.metric_searches as searches,
+        am.metric_period_start as period_start
+    FROM aggregated_metrics am
+    ORDER BY
+        CASE am.metric_timeframe
+            WHEN 'day' THEN 1
+            WHEN 'week' THEN 2
+            WHEN 'month' THEN 3
+            WHEN 'year' THEN 4
+        END,
+        am.metric_period_start
     ORDER BY timeframe, period_start;
 END;
 $$ LANGUAGE plpgsql;
