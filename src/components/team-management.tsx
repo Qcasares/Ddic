@@ -316,7 +316,7 @@ export function TeamManagement({ dictionaryId }: TeamManagementProps) {
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button variant="primary" type="submit">
+          <Button variant="default" type="submit">
             Save
           </Button>
         </DialogFooter>

@@ -4,7 +4,7 @@ import { DataLineage } from '@/components/data-lineage';
 import { ApprovalQueue } from '@/components/approval-queue';
 import { BusinessGlossary } from '@/components/business-glossary';
 import { VersionHistory } from '@/components/version-history';
-import { CommentsSection } from '@/components/comments-section';
+import CommentsSection from '@/components/comments-section';
 import { FieldManagement } from '@/components/field-management';
 
 interface DictionaryViewProps {

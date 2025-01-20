@@ -1,340 +1,164 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, MessageSquare, Reply, Trash2 } from 'lucide-react';
+import { useComments } from '@/hooks/use-comments';
 import { formatDistanceToNow } from 'date-fns';
+import { Loader2, Send, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
 
 interface CommentsProps {
   entryId: string;
 }
 
-interface User {
-  email: string;
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  created_at: string;
-  created_by: string;
-  parent_id: string | null;
-  user: User[];
-  replies?: Comment[];
-}
-
-// Type guard to ensure single user
-function getSingleUser(users: User[] | undefined): User {
-  return (users && users[0]) || { email: '?' };
-}
-
-export function CommentsSection({ entryId }: CommentsProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function CommentsSection({ entryId }: CommentsProps) {
   const [newComment, setNewComment] = useState('');
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const {
+    comments,
+    isLoading,
+    fetchComments,
+    addComment,
+    deleteComment,
+    updateComment,
+  } = useComments({ entryId });
 
   useEffect(() => {
-    if (!entryId) return;
-    loadComments();
+    fetchComments();
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUser(user.id);
+    });
+  }, [fetchComments]);
 
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('comments')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'comments',
-        filter: `entry_id=eq.${entryId}`,
-      }, () => {
-        loadComments();
-      })
-      .subscribe();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
 
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [entryId]);
+    await addComment(newComment);
+    setNewComment('');
+  };
 
-  const loadComments = async () => {
-    if (!entryId) return;
-    
-    try {
-      setIsLoading(true);
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
-
-      const { data, error } = await supabase
-        .from('comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          created_by,
-          parent_id,
-          user:users!comments_created_by_fkey (
-            email
-          )
-        `)
-        .eq('entry_id', entryId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Organize comments into threads
-      const threads = data.reduce((acc: Comment[], comment: any) => {
-        if (!comment.parent_id) {
-          const typedComment: Comment = {
-            ...comment,
-            replies: data.filter(c => c.parent_id === comment.id).map(reply => ({
-              ...reply,
-              user: Array.isArray(reply.user) ? reply.user : [reply.user]
-            } as Comment)),
-            user: Array.isArray(comment.user) ? comment.user : [comment.user]
-          } as Comment;
-          acc.push(typedComment);
-        }
-        return acc;
-      }, []);
-
-      setComments(threads);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load comments',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  const handleEdit = async (commentId: string) => {
+    const comment = comments.find(c => c.id === commentId);
+    if (comment) {
+      setEditingCommentId(commentId);
+      setEditText(comment.text);
     }
   };
 
-  const handleSubmit = async (parentId: string | null = null) => {
-    if (!entryId) return;
-    
-    try {
-      setIsSubmitting(true);
-      const content = parentId ? newComment : newComment.trim();
-      
-      if (!content) return;
+  const handleSaveEdit = async (commentId: string) => {
+    if (!editText.trim()) return;
 
-      const { error } = await supabase
-        .from('comments')
-        .insert([{
-          entry_id: entryId,
-          content,
-          parent_id: parentId
-        }]);
-
-      if (error) throw error;
-
-      setNewComment('');
-      setReplyTo(null);
-      
-      toast({
-        title: 'Success',
-        description: 'Comment added successfully',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to add comment',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await updateComment(commentId, editText);
+    setEditingCommentId(null);
+    setEditText('');
   };
 
-  const handleDelete = async (commentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', commentId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Comment deleted successfully',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete comment',
-        variant: 'destructive',
-      });
-    }
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditText('');
   };
 
-  if (!entryId) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[400px] text-center">
-        <MessageSquare className="h-8 w-8 text-muted-foreground mb-2" />
-        <p className="text-sm text-muted-foreground">
-          Select an entry to view comments
-        </p>
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="h-5 w-5" />
-        <h3 className="font-medium">Comments</h3>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex gap-4">
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            className="flex-1"
-          />
-          <Button 
-            onClick={() => handleSubmit(null)}
-            disabled={isSubmitting || !newComment.trim()}
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Comment'
-            )}
-          </Button>
-        </div>
-
-        <ScrollArea className="h-[400px]">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : comments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <MessageSquare className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No comments yet. Start the discussion!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <div key={comment.id} className="space-y-4">
-                  <div className="flex gap-4">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {getSingleUser(comment.user).email.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{getSingleUser(comment.user).email}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(comment.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-sm">{comment.content}</p>
-                      <div className="flex items-center gap-2">
+      <ScrollArea className="h-[400px] pr-4">
+        <div className="space-y-4">
+          {comments.map((comment) => (
+            <div
+              key={comment.id}
+              className="border rounded-lg p-4 space-y-2"
+            >
+              {editingCommentId === comment.id ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleSaveEdit(comment.id)}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-sm">{comment.author.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        {comment.updated_at !== comment.created_at && ' (edited)'}
+                      </p>
+                    </div>
+                    {currentUser === comment.author_id && (
+                      <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-muted-foreground"
-                          onClick={() => setReplyTo(comment.id)}
+                          onClick={() => handleEdit(comment.id)}
                         >
-                          <Reply className="h-4 w-4 mr-2" />
-                          Reply
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Replies */}
-                  {comment.replies && comment.replies.length > 0 && (
-                    <div className="ml-12 space-y-4">
-                      {comment.replies.map((reply) => (
-                        <div key={reply.id} className="flex gap-4">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {getSingleUser(reply.user).email.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{getSingleUser(reply.user).email}</span>
-                                <span className="text-sm text-muted-foreground">
-                                  {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
-                                </span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(reply.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <p className="text-sm">{reply.content}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Reply input */}
-                  {replyTo === comment.id && (
-                    <div className="ml-12 flex gap-4">
-                      <Textarea
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Write a reply..."
-                        className="flex-1"
-                      />
-                      <div className="space-x-2">
-                        <Button
-                          onClick={() => handleSubmit(comment.id)}
-                          disabled={isSubmitting || !newComment.trim()}
-                        >
-                          {isSubmitting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            'Reply'
-                          )}
+                          <Edit2 className="h-4 w-4" />
+                          <span className="sr-only">Edit comment</span>
                         </Button>
                         <Button
                           variant="ghost"
-                          onClick={() => {
-                            setReplyTo(null);
-                            setNewComment('');
-                          }}
+                          size="sm"
+                          onClick={() => deleteComment(comment.id)}
                         >
-                          Cancel
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <span className="sr-only">Delete comment</span>
                         </Button>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                  <p className="text-sm">{comment.text}</p>
+                </>
+              )}
             </div>
-          )}
-        </ScrollArea>
-      </div>
+          ))}
+        </div>
+      </ScrollArea>
+
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <Textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Write a comment..."
+          className="min-h-[100px]"
+        />
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            disabled={!newComment.trim()}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Send
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
