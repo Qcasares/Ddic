@@ -7,14 +7,24 @@ CREATE INDEX idx_metrics_dictionary_time
 ON public.performance_metrics (dictionary_id, created_at);
 
 -- Create analytics_events table
+-- Drop existing tables and views if they exist
+DROP MATERIALIZED VIEW IF EXISTS public.monthly_metrics;
+DROP MATERIALIZED VIEW IF EXISTS public.daily_metrics;
+DROP TABLE IF EXISTS public.analytics_events;
+
+-- Create analytics_events table
 CREATE TABLE public.analytics_events (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     dictionary_id uuid REFERENCES public.dictionaries(id) NOT NULL,
     event_type text NOT NULL,
     event_data jsonb DEFAULT '{}'::jsonb,
-    user_id uuid REFERENCES auth.users(id),
+    user_id text NOT NULL, -- Changed to text since we're passing string IDs
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+-- Create index for faster querying
+CREATE INDEX idx_analytics_events_dictionary_id ON public.analytics_events(dictionary_id);
+CREATE INDEX idx_analytics_events_created_at ON public.analytics_events(created_at);
 
 -- Enable RLS on analytics_events
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;

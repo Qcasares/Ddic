@@ -1,10 +1,9 @@
 import { supabase } from './supabase';
-import { 
-  AnalyticsMetrics, 
-  AnalyticsFilter, 
-  AnalyticsEvent, 
-  TrendMetrics,
-  MetricPoint 
+import {
+  AnalyticsMetrics,
+  AnalyticsFilter,
+  AnalyticsEvent,
+  TrendMetrics
 } from '@/types/analytics';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -51,7 +50,12 @@ class AnalyticsService {
     try {
       const { error } = await supabase
         .from('analytics_events')
-        .insert([event]);
+        .insert([{
+          dictionary_id: event.dictionaryId,
+          event_type: event.eventType,
+          event_data: event.eventData,
+          user_id: event.userId
+        }]);
 
       if (error) throw error;
     } catch (error) {
@@ -127,7 +131,7 @@ class AnalyticsService {
     // Group and transform metrics by timeframe
     metricsData?.forEach((metric: any) => {
       if (trends[metric.timeframe as keyof TrendMetrics]) {
-        trends[metric.timeframe as keyof TrendMetrics].push({
+        trends[metric.timeframe as keyof TrendMetrics].push(({
           timestamp: metric.period_start,
           value: metric.total_events || 0,
           views: metric.views || 0,
@@ -135,7 +139,7 @@ class AnalyticsService {
           searches: metric.searches || 0,
           loadTime: 0,
           interactionTime: 0
-        });
+        }) satisfies TrendMetrics[keyof TrendMetrics][number]);
       }
     });
 
