@@ -314,7 +314,10 @@ export function TeamManagement({ dictionaryId }: TeamManagementProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Close
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit">
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

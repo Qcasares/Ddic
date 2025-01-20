@@ -238,6 +238,9 @@ export function CreateEntryDialog({ dictionaryId }: CreateEntryDialogProps) {
           </div>
 
           <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
