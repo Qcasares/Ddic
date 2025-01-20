@@ -173,6 +173,8 @@ export function AnalyticsDashboard({ dictionaryId }: AnalyticsDashboardProps) {
           <TabsTrigger value="activity">Activity Trends</TabsTrigger>
           <TabsTrigger value="performance">Performance Metrics</TabsTrigger>
           <TabsTrigger value="devices">Device Distribution</TabsTrigger>
+          <TabsTrigger value="sessions">User Sessions</TabsTrigger>
+          <TabsTrigger value="funnels">Conversion Funnels</TabsTrigger>
         </TabsList>
 
         <TabsContent value="activity" className="mt-4">
@@ -259,6 +261,115 @@ export function AnalyticsDashboard({ dictionaryId }: AnalyticsDashboardProps) {
                 </div>
               ))}
             </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sessions" className="mt-4">
+          <Card className="p-6">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 border rounded-lg bg-card">
+                <div className="text-sm font-medium mb-1">Total Sessions</div>
+                <div className="text-xl font-bold">
+                  {metrics.activity.totalSessions.toLocaleString()}
+                </div>
+              </div>
+              <div className="p-4 border rounded-lg bg-card">
+                <div className="text-sm font-medium mb-1">Bounce Rate</div>
+                <div className="text-xl font-bold">
+                  {(metrics.activity.bounceRate * 100).toFixed(1)}%
+                </div>
+              </div>
+              <div className="p-4 border rounded-lg bg-card">
+                <div className="text-sm font-medium mb-1">Avg. Session Duration</div>
+                <div className="text-xl font-bold">
+                  {Math.round(metrics.activity.averageSessionDuration / 60)} min
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={metrics.trends[timeframe]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="timestamp"
+                    tickFormatter={(value) => format(new Date(value), 'MMM dd')}
+                  />
+                  <YAxis />
+                  <Tooltip
+                    labelFormatter={(value) => format(new Date(value), 'MMM dd, yyyy')}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="sessions"
+                    stroke="#8b5cf6"
+                    name="Active Sessions"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="activeUsers"
+                    stroke="#eab308"
+                    name="Active Users"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="funnels" className="mt-4">
+          <Card className="p-6">
+            {metrics.funnels && metrics.funnels.length > 0 ? (
+              <div className="space-y-6">
+                {metrics.funnels.map((funnel) => (
+                  <div key={funnel.funnelId} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h4 className="text-lg font-medium">{funnel.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {funnel.totalEntries.toLocaleString()} total entries
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold">
+                          {(funnel.conversionRate * 100).toFixed(1)}%
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Overall Conversion
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {funnel.steps.map((step, index) => (
+                        <div key={step.name} className="flex items-center gap-4">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">{step.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {step.entryCount.toLocaleString()} entries
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">
+                              {(step.conversionRate * 100).toFixed(1)}%
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {Math.round(step.averageTime / 1000)}s avg. time
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No conversion funnels configured
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

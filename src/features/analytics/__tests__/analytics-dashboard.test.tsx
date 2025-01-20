@@ -24,6 +24,8 @@ const mockMetrics: AnalyticsMetrics = {
     activeUsers: 200,
     uniqueVisitors: 150,
     averageSessionDuration: 300,
+    totalSessions: 250,
+    bounceRate: 0.25
   },
   performance: {
     avgLoadTime: 250,
@@ -37,6 +39,8 @@ const mockMetrics: AnalyticsMetrics = {
       '404': 0.02,
       '500': 0.01,
     },
+    timeToFirstInteraction: 100,
+    serverResponseTime: 75
   },
   trends: {
     day: [
