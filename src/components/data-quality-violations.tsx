@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { useDataQuality } from '@/hooks/use-data-quality';
 import { formatViolationMessage } from '@/lib/quality-management';
 import type { QualityViolation } from '@/lib/quality-management';
@@ -73,7 +73,6 @@ export function DataQualityViolations({ dictionaryId }: DataQualityViolationsPro
         title: 'Data Quality Violations',
         description: `${violations.length} violation(s) detected`,
         variant: 'destructive',
-        icon: <AlertTriangle className="h-4 w-4" />
       });
     }
   }, [violations, toast]);

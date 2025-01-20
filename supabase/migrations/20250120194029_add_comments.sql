@@ -1,3 +1,6 @@
+-- Drop existing comments table if it exists
+DROP TABLE IF EXISTS comments CASCADE;
+
 -- Create comments table
 CREATE TABLE comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

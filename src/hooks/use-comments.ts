@@ -25,21 +25,49 @@ export function useComments({ entryId }: UseCommentsProps) {
 
   const fetchComments = useCallback(async () => {
     try {
+      // Early return if entryId is not a valid UUID
+      if (!entryId || entryId.trim() === '') {
+        setComments([]);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
-      const { data, error } = await supabase
+      
+      // First, fetch comments
+      const { data: commentsData, error: commentsError } = await supabase
         .from('comments')
-        .select(`
-          *,
-          author:author_id(
-            email
-          )
-        `)
+        .select('*')
         .eq('entry_id', entryId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (commentsError) throw commentsError;
 
-      setComments(data || []);
+      // If no comments, set empty array and return
+      if (!commentsData || commentsData.length === 0) {
+        setComments([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Then, fetch author emails
+      const authorIds = commentsData.map(comment => comment.author_id).filter(Boolean);
+      const { data: authorsData, error: authorsError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .in('id', authorIds);
+
+      if (authorsError) throw authorsError;
+
+      // Combine comments with author emails
+      const enrichedComments: Comment[] = commentsData.map(comment => ({
+        ...comment,
+        author: {
+          email: authorsData.find(author => author.id === comment.author_id)?.email || 'Unknown'
+        }
+      }));
+
+      setComments(enrichedComments);
     } catch (error) {
       console.error('Error fetching comments:', error);
       toast({
@@ -47,6 +75,7 @@ export function useComments({ entryId }: UseCommentsProps) {
         description: 'Failed to load comments',
         variant: 'destructive',
       });
+      setComments([]);
     } finally {
       setIsLoading(false);
     }
