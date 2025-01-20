@@ -369,13 +369,16 @@ class AnalyticsService {
     filter?: AnalyticsFilter
   ): Promise<AnalyticsMetrics> {
     const { data: metricsData, error } = await supabase
-      .rpc('get_dictionary_metrics', {
+      .rpc('get_metrics_with_refresh', {
         p_dictionary_id: dictionaryId,
         p_start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
         p_end_date: new Date().toISOString()
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Failed to fetch metrics:', error);
+      throw error;
+    }
 
     const trends: TrendMetrics = {
       day: [],

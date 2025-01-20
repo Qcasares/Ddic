@@ -131,12 +131,37 @@ GROUP BY
 CREATE UNIQUE INDEX idx_daily_metrics_dict_day 
 ON public.daily_metrics (dictionary_id, day);
 
--- Create function to refresh materialized views
+-- Create functions to refresh materialized views
 CREATE OR REPLACE FUNCTION refresh_analytics_views()
 RETURNS trigger AS $$
 BEGIN
     REFRESH MATERIALIZED VIEW CONCURRENTLY public.daily_metrics;
     RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to fetch metrics with refresh
+CREATE OR REPLACE FUNCTION get_metrics_with_refresh(
+    p_dictionary_id uuid,
+    p_start_date timestamp with time zone,
+    p_end_date timestamp with time zone
+)
+RETURNS TABLE (
+    timeframe text,
+    unique_users bigint,
+    total_events bigint,
+    views bigint,
+    edits bigint,
+    searches bigint,
+    period_start timestamp with time zone
+) AS $$
+BEGIN
+    -- Refresh view first
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.daily_metrics;
+    
+    -- Then return metrics
+    RETURN QUERY
+    SELECT * FROM get_dictionary_metrics(p_dictionary_id, p_start_date, p_end_date);
 END;
 $$ LANGUAGE plpgsql;
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { analyticsService } from '@/lib/analytics-service';
 import { AnalyticsMetrics, AnalyticsFilter } from '@/types/analytics';
+import { useAuth } from '@/features/auth/auth-context';
 
 interface UseAnalyticsOptions {
   filter?: AnalyticsFilter;
@@ -55,14 +56,17 @@ export function useAnalytics(
   }, [dictionaryId, options.enableRealtime]);
 
   // Track page view
+  const { session } = useAuth();
   useEffect(() => {
-    analyticsService.trackEvent({
-      dictionaryId,
-      eventType: 'view',
-      eventData: {},
-      userId: 'current-user-id', // Replace with actual user ID
-    });
-  }, [dictionaryId]);
+    if (session?.user) {
+      analyticsService.trackEvent({
+        dictionaryId,
+        eventType: 'view',
+        eventData: {},
+        userId: session.user.id,
+      });
+    }
+  }, [dictionaryId, session]);
 
   // Export functionality
   const exportData = async () => {
@@ -96,15 +100,19 @@ export function useAnalytics(
 
 // Utility hook for tracking custom events
 export function useAnalyticsEvent(dictionaryId: string) {
+  const { session } = useAuth();
+  
   return useCallback(
     (eventType: string, eventData: Record<string, any> = {}) => {
+      if (!session?.user) return;
+      
       return analyticsService.trackEvent({
         dictionaryId,
         eventType,
         eventData,
-        userId: 'current-user-id', // Replace with actual user ID
+        userId: session.user.id,
       });
     },
-    [dictionaryId]
+    [dictionaryId, session]
   );
 }
