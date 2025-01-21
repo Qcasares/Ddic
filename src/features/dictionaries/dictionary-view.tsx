@@ -119,8 +119,8 @@ export function DictionaryView() {
                 </TabsList>
                 <TabsContent value="comments" className="mt-4">
                   <CommentsSection
-                    commentableId={selectedEntryData.id}
-                    commentableType="dictionary_entries"
+                    entryId={selectedEntryData.id}
+                    fieldName={selectedEntryData.field_name}
                   />
                 </TabsContent>
                 <TabsContent value="history">

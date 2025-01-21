@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/auth-context'
 import { User } from '@supabase/supabase-js'
 import { Tables } from '@/types/supabase'
 import { PostgrestError } from '@supabase/supabase-js'
+import { useRealtimeSync } from '@/hooks/use-realtime-sync'
 
 export type Comment = Tables<'comments'> & {
   author?: {
@@ -15,8 +16,7 @@ export type Comment = Tables<'comments'> & {
 }
 
 type UseCommentsProps = {
-  commentableId: string
-  commentableType: 'dictionary_entries' | 'quality_rules'
+  entryId: string
   fieldName?: string
 }
 
@@ -37,7 +37,7 @@ const isValidCommentWithAuthor = (comment: any): comment is CommentWithAuthor =>
          ))
 }
 
-export function useComments({ commentableId, fieldName }: UseCommentsProps) {
+export function useComments({ entryId, fieldName }: UseCommentsProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -62,7 +62,7 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
       const query = supabase
         .from('comments')
         .select('*, users:author_id(*)')
-        .eq('entry_id', commentableId)
+        .eq('entry_id', entryId)
         .order('created_at', { ascending: true })
 
       const { data, error } = await (fieldName 
@@ -88,7 +88,13 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [commentableId, fieldName, toast])
+  }, [entryId, fieldName, toast])
+
+  // Use realtime sync hook
+  const { syncStatus } = useRealtimeSync(`comments-${entryId}`, 'comments', comments, {
+    onDataUpdate: fetchComments,
+    priority: 'high'
+  })
 
   const addComment = useCallback(async (text: string) => {
     if (!user) {
@@ -100,13 +106,33 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
       return
     }
 
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`
+    const newComment: Comment = {
+      id: tempId,
+      entry_id: entryId,
+      author_id: user.id,
+      text,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      field_name: fieldName || null,
+      author: {
+        id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name
+      }
+    }
+
+    setComments(prev => [...prev, newComment])
+
     try {
       const { data, error } = await supabase
         .from('comments')
         .insert({
-          entry_id: commentableId,
+          entry_id: entryId,
           author_id: user.id,
-          text
+          text,
+          field_name: fieldName || null
         })
         .select('*, users:author_id(*)')
         .single()
@@ -117,13 +143,20 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
         throw new Error('Invalid comment data')
       }
 
-      const newComment = processComment(data)
-      setComments(prev => [...prev, newComment])
+      // Replace optimistic update with real data
+      setComments(prev => [
+        ...prev.filter(c => c.id !== tempId),
+        processComment(data)
+      ])
+      
       toast({
         title: 'Success',
         description: 'Comment added successfully.'
       })
     } catch (err) {
+      // Rollback optimistic update
+      setComments(prev => prev.filter(c => c.id !== tempId))
+      
       console.error('Error adding comment:', err)
       const errorObj = err as PostgrestError
       toast({
@@ -132,7 +165,7 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
         variant: 'destructive'
       })
     }
-  }, [commentableId, user, toast])
+  }, [entryId, fieldName, user, toast])
 
   const updateComment = useCallback(async (commentId: string, text: string) => {
     if (!user) {
@@ -143,6 +176,17 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
       })
       return
     }
+
+    // Optimistic update
+    setComments(prev =>
+      prev.map(comment =>
+        comment.id === commentId ? { 
+          ...comment, 
+          text,
+          updated_at: new Date().toISOString()
+        } : comment
+      )
+    )
 
     try {
       const { data, error } = await supabase
@@ -155,16 +199,14 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
 
       if (error) throw error
 
-      setComments(prev =>
-        prev.map(comment =>
-          comment.id === commentId ? { ...comment, text, updated_at: data.updated_at } : comment
-        )
-      )
       toast({
         title: 'Success',
         description: 'Comment updated successfully.'
       })
     } catch (err) {
+      // Rollback optimistic update
+      fetchComments()
+      
       console.error('Error updating comment:', err)
       const errorObj = err as PostgrestError
       toast({
@@ -173,7 +215,7 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
         variant: 'destructive'
       })
     }
-  }, [user, toast])
+  }, [user, toast, fetchComments])
 
   const deleteComment = useCallback(async (commentId: string) => {
     if (!user) {
@@ -185,6 +227,10 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
       return
     }
 
+    // Optimistic update
+    const deletedComment = comments.find(c => c.id === commentId)
+    setComments(prev => prev.filter(c => c.id !== commentId))
+
     try {
       const { error } = await supabase
         .from('comments')
@@ -194,12 +240,16 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
 
       if (error) throw error
 
-      setComments(prev => prev.filter(comment => comment.id !== commentId))
       toast({
         title: 'Success',
         description: 'Comment deleted successfully.'
       })
     } catch (err) {
+      // Rollback optimistic update
+      if (deletedComment) {
+        setComments(prev => [...prev, deletedComment])
+      }
+      
       console.error('Error deleting comment:', err)
       const errorObj = err as PostgrestError
       toast({
@@ -208,40 +258,17 @@ export function useComments({ commentableId, fieldName }: UseCommentsProps) {
         variant: 'destructive'
       })
     }
-  }, [user, toast])
+  }, [user, toast, comments])
 
   useEffect(() => {
     fetchComments()
   }, [fetchComments])
 
-  // Set up real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel(`comments-${commentableId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'comments',
-          filter: `entry_id=eq.${commentableId}`
-        },
-        () => {
-          // Refresh comments when changes occur
-          fetchComments()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [commentableId, fetchComments])
-
   return {
     comments,
     isLoading,
     error,
+    syncStatus,
     addComment,
     updateComment,
     deleteComment,

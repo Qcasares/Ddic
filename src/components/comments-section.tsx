@@ -9,12 +9,11 @@ import { formatDistanceToNow } from 'date-fns'
 import { Loader2, Send, Pencil, Trash2 } from 'lucide-react'
 
 interface CommentsSectionProps {
-  commentableId: string
-  commentableType: 'dictionary_entries' | 'quality_rules'
+  entryId: string
   fieldName?: string
 }
 
-export function CommentsSection({ commentableId, commentableType, fieldName }: CommentsSectionProps) {
+export function CommentsSection({ entryId, fieldName }: CommentsSectionProps) {
   const [newComment, setNewComment] = useState('')
   const [editingComment, setEditingComment] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -28,7 +27,7 @@ export function CommentsSection({ commentableId, commentableType, fieldName }: C
     addComment,
     updateComment,
     deleteComment
-  } = useComments({ commentableId, commentableType, fieldName })
+  } = useComments({ entryId, fieldName })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
