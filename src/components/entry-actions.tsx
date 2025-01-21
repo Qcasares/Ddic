@@ -76,7 +76,7 @@ export function EntryActions({
     } finally {
       setIsDeleting(false);
     }
-  };
+  });
 
   const handleEdit = () => {
     if (onEdit) {

@@ -130,7 +130,7 @@ export function TeamManagement({ dictionaryId }: TeamManagementProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   const handleRemoveMember = async (userId: string) => {
     try {
