@@ -44,8 +44,7 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchTerms = async () => {
+  const fetchTerms = useCallback(async () => {
       try {
         setIsLoading(true);
 
@@ -76,9 +75,15 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
           }
 
           const { data, error } = await query;
-          if (error) throw error;
+          if (error) {
+            throw error;
+          }
 
-          setTerms(data);
+          if (!data) {
+            throw new Error('No data returned from query');
+          }
+
+          setTerms(data as BusinessTerm[]);
         }, {
           maxRetries: 2,
           baseDelay: 500
@@ -89,9 +94,9 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
     });
 
     fetchTerms();
-  }, [dictionaryId, debouncedSearch, toast]);
+  }, [dictionaryId, debouncedSearch, toast, fetchTerms]);
 
-  const getStatusBadge = useCallback((status: string = 'draft') => {
+  const getStatusBadge = useCallback((status: string = 'draft'): JSX.Element => {
     switch (status) {
       case 'approved':
         return (
@@ -138,7 +143,7 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
             <Book className="h-5 w-5" />
             <h3 className="text-lg font-medium">Business Glossary</h3>
           </div>
-          <CreateTermDialog onSuccess={() => setTerms([])} />
+          <CreateTermDialog onSuccess={() => fetchTerms()} />
         </div>
 
         <div className="relative">
