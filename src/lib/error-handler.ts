@@ -92,7 +92,7 @@ export function handleError(error: unknown): AppError {
 
   if (error instanceof Error) {
     // Handle Supabase errors
-    if ('code' in error && typeof error.code === 'string') {
+    if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
       if (error.code.startsWith('PGRST')) {
         return new SecurityError(
           ERROR_MESSAGES[ErrorType.PERMISSION],

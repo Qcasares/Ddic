@@ -144,7 +144,7 @@ export function validateEntry(entry: Record<string, unknown>, rules: QualityRule
 
       case 'enum':
         if (Array.isArray(rule.value)) {
-          isViolation = !rule.value.includes(value);
+          isViolation = typeof value === 'string' && !rule.value.includes(value);
         }
         break;
     }

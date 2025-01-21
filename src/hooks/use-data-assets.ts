@@ -39,5 +39,5 @@ export function useDataAssets() {
     fetchDataAssets();
   }, []);
 
-  return { dataAssets, isLoading };
+  return { dataAssets, isLoading, error };
 }

@@ -10,8 +10,8 @@ interface CacheOptions {
 }
 
 class CacheManager {
-  private cache: Map<string, CacheEntry<any>>;
-  private pendingRequests: Map<string, Promise<any>>;
+  private cache: Map<string, CacheEntry<unknown>>;
+  private pendingRequests: Map<string, Promise<unknown>>;
   private maxSize: number;
   private defaultTTL: number;
 
