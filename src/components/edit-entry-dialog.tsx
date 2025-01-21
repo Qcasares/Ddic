@@ -98,6 +98,21 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
         JSON.stringify(validatedData.metadata) : 
         null;
 
+      // Validate entry ID exists
+      if (!entry?.id) {
+        throw new Error('Invalid entry ID for update operation');
+      }
+
+      // Convert metadata with error handling
+      let supabaseMetadata;
+      try {
+        supabaseMetadata = validatedData.metadata ? 
+          JSON.stringify(validatedData.metadata) : 
+          null;
+      } catch (e) {
+        throw new Error('Failed to serialize metadata: ' + (e instanceof Error ? e.message : 'Unknown error'));
+      }
+
       const { data, error } = await supabase
         .from('dictionary_entries')
         .update({
@@ -105,20 +120,30 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
           data_type: validatedData.data_type,
           description: validatedData.description,
           sample_values: validatedData.sample_values,
-          metadata: supabaseMetadata,  // Use stringified metadata
+          metadata: supabaseMetadata,
           updated_at: new Date().toISOString()
         })
         .eq('id', entry.id)
-        .select();
+        .select()
+        .single();  // Ensure single record response
 
       if (error) {
-        console.error('Supabase error details:', error);
-        throw new Error(error.message || 'Failed to update entry');
+        console.error('Supabase error:', {
+          code: error.code,
+          details: error.details,
+          message: error.message
+        });
+        throw new Error(
+          `Database update failed: ${error.message} (${error.code || 'no-code'})`
+        );
       }
 
       if (!data) {
-        throw new Error('No data returned from update operation');
+        throw new Error('Update operation returned no data - check record permissions');
       }
+
+      // Invalidate cache for this dictionary
+      cacheManager.invalidate(`dictionary-${entry.id}-*`);
 
       toast({
         title: 'Success',
