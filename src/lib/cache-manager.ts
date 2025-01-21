@@ -62,14 +62,6 @@ class CacheManager {
       throw new Error('TTL must be a non-negative finite number');
     }
 
-    if (typeof fetcher !== 'function') {
-      throw new Error('Fetcher must be a function');
-    }
-
-    if (ttl < 0) {
-      throw new Error('TTL must be non-negative');
-    }
-
     try {
       // Check cache first
       const cached = this.cache.get(key);

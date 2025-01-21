@@ -104,7 +104,7 @@ export function createRule(params: CreateRuleParams): QualityRule {
  * @param rules Array of quality rules to check
  * @returns Array of quality violations found
  */
-export function validateEntry(entry: Record<string, any>, rules: QualityRule[]): QualityViolation[] {
+export function validateEntry(entry: Record<string, unknown>, rules: QualityRule[]): QualityViolation[] {
   const violations: QualityViolation[] = [];
 
   // Only process enabled rules

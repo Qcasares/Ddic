@@ -7,6 +7,13 @@ export interface DataAsset {
   tags: string[];
 }
 
+// Temporary mock data until API integration
+const mockDataAssets = (): DataAsset[] => [
+  { id: '1', name: 'Asset 1', description: 'Description 1', tags: ['tag1', 'tag2'] },
+  { id: '2', name: 'Asset 2', description: 'Description 2', tags: ['tag3'] },
+  { id: '3', name: 'Asset 3', description: 'Description 3', tags: ['tag1'] },
+];
+
 export function useDataAssets() {
   const [dataAssets, setDataAssets] = useState<DataAsset[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);

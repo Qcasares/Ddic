@@ -59,22 +59,22 @@ export class Logger {
     /**
      * Log debug level message
      */
-    debug(message: string, context?: Record<string, unknown>): void {
-        this.log(LogLevel.DEBUG, message, context);
+    debug(message: string, context?: Record<string, unknown>, error?: Error): void {
+        this.log(LogLevel.DEBUG, message, context, error);
     }
 
     /**
      * Log info level message
      */
-    info(message: string, context?: Record<string, unknown>): void {
-        this.log(LogLevel.INFO, message, context);
+    info(message: string, context?: Record<string, unknown>, error?: Error): void {
+        this.log(LogLevel.INFO, message, context, error);
     }
 
     /**
      * Log warning level message
      */
-    warn(message: string, context?: Record<string, unknown>): void {
-        this.log(LogLevel.WARN, message, context);
+    warn(message: string, context?: Record<string, unknown>, error?: Error): void {
+        this.log(LogLevel.WARN, message, context, error);
     }
 
     /**
