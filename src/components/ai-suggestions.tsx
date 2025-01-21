@@ -2,6 +2,7 @@ import { useDictionaryEntries } from '@/hooks/use-dictionary-entries';
 import { generateFieldSuggestions, FieldSuggestion } from '@/lib/ai-suggestions';
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export function AISuggestions({ dictionaryId }: { dictionaryId: string }) {
   const { data } = useDictionaryEntries({
