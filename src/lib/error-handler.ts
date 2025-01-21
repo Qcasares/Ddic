@@ -1,6 +1,5 @@
 import { toast } from '@/hooks/use-toast';
 import type { ToastProps } from '@/components/ui/toast';
-import type { Toast } from '@/hooks/use-toast';
 import {
   AppError,
   ErrorType,
@@ -11,7 +10,9 @@ import {
   isAppError,
   isRetryable,
   isNetworkError
-} from '@/lib/utils/errors';
+} from '@/lib/types/errors';
+
+export { AppError, ErrorType };
 
 // Toast options type
 type ToasterToast = ToastProps & {

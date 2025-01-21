@@ -2,18 +2,23 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Logger } from '../utils/logger';
 import { SupabaseRepository } from './supabase-repository';
 import { DatabaseError } from '../utils/errors';
-import { QualityRule } from '../quality-management';
+import { QualityRule, CreateQualityRule, UpdateQualityRule } from '@/lib/types/quality-rule';
 import { BaseEntity } from './base';
 
 /**
  * Extended entity type that includes Supabase-specific field names
  */
 interface QualityRuleEntity extends BaseEntity {
-    dictionary_id: string;  // Supabase uses snake_case
-    rule_type: QualityRule['ruleType'];
+    dictionary_id: string;
+    rule_type: string;
     name: string;
-    configuration: QualityRule['configuration'];
-    severity: QualityRule['severity'];
+    description?: string;
+    severity: string;
+    condition?: string;
+    field?: string;
+    value?: string | number | string[];
+    enabled?: boolean;
+    configuration?: Record<string, unknown>;
     created_by: string;
 }
 
@@ -111,13 +116,18 @@ export class QualityRuleRepository extends SupabaseRepository<QualityRuleEntity>
         return {
             id: entity.id,
             dictionaryId: entity.dictionary_id,
-            name: entity.name,
             ruleType: entity.rule_type,
-            configuration: entity.configuration,
+            name: entity.name,
+            description: entity.description || '',
             severity: entity.severity,
+            condition: entity.condition || '',
+            field: entity.field || '',
+            value: entity.value,
+            enabled: entity.enabled || false,
+            configuration: entity.configuration,
             createdAt: entity.created_at,
-            createdBy: entity.created_by,
-            updatedAt: entity.updated_at
+            updatedAt: entity.updated_at,
+            createdBy: entity.created_by || 'system'
         };
     }
 
@@ -137,9 +147,14 @@ export class QualityRuleRepository extends SupabaseRepository<QualityRuleEntity>
             dictionary_id: rule.dictionaryId,
             rule_type: rule.ruleType,
             name: rule.name,
-            configuration: rule.configuration,
+            description: rule.description,
             severity: rule.severity,
-            created_by: rule.createdBy || 'system' // Provide default value
+            condition: rule.condition,
+            field: rule.field,
+            value: rule.value,
+            enabled: rule.enabled ?? false,
+            configuration: rule.configuration,
+            created_by: rule.createdBy || 'system'
         };
     }
 }
