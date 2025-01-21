@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Json } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -66,13 +67,16 @@ export function CreateEntryDialog({ dictionaryId }: CreateEntryDialogProps) {
         sample_values: formData.sample_values ? 
           formData.sample_values.split(',').map(v => v.trim()) : 
           [],
-        metadata: formData.metadata?.reduce((acc, field) => ({
-          ...acc,
-          [field.key]: {
-            value: field.value,
-            type: field.type
-          }
-        }), {}),
+        metadata: formData.metadata?.reduce<Record<string, string>>((acc, field) => {
+          // Convert all values to strings for JSON compatibility
+          const value = typeof field.value === 'object'
+            ? JSON.stringify(field.value)
+            : String(field.value);
+          return {
+            ...acc,
+            [field.key]: value
+          };
+        }, {}) satisfies Json,
       });
 
       await retry(async () => {
