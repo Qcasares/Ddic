@@ -37,6 +37,7 @@ export function useCache<T>(
     }
 
     setIsLoading(true);
+
     try {
       const freshData = await fetcher();
       cache.set(key, { data: freshData, timestamp: now });
@@ -54,8 +55,51 @@ export function useCache<T>(
   }, [fetcher, key, ttl]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let isMounted = true;
+
+    const fetchWithMountCheck = async () => {
+      const cached = cache.get(key);
+      const now = Date.now();
+
+      if (cached && now - cached.timestamp < ttl) {
+        if (isMounted) {
+          setData(cached.data);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setIsLoading(true);
+      }
+
+      try {
+        const freshData = await fetcher();
+        if (isMounted) {
+          cache.set(key, { data: freshData, timestamp: now });
+          setData(freshData);
+          setError(null);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error('Failed to fetch data'));
+          if (!cached) {
+            setData(null);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchWithMountCheck();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetcher, key, ttl]);
 
   return {
     data,

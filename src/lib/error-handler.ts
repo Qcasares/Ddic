@@ -1,153 +1,181 @@
 import { toast } from '@/hooks/use-toast';
+import type { ToastProps } from '@/components/ui/toast';
+import {
+  AppError,
+  ErrorType,
+  ErrorSeverity,
+  NetworkError,
+  ValidationError,
+  SecurityError,
+  isAppError,
+  isRetryable,
+  isNetworkError
+} from '@/lib/utils/errors';
 
-// Error types
-export enum ErrorType {
-  VALIDATION = 'VALIDATION_ERROR',
-  NETWORK = 'NETWORK_ERROR',
-  AUTH = 'AUTH_ERROR',
-  DATABASE = 'DATABASE_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
-  PERMISSION = 'PERMISSION_ERROR',
-  WORKFLOW = 'WORKFLOW_ERROR',
-  TEAM = 'TEAM_ERROR',
-  UNKNOWN = 'UNKNOWN_ERROR'
-}
-
-// Error codes mapping
-const ERROR_CODES: Record<string, ErrorType> = {
-  '42501': ErrorType.PERMISSION,
-  '23505': ErrorType.DATABASE, // Unique violation
-  '23503': ErrorType.DATABASE, // Foreign key violation
-  '42P01': ErrorType.DATABASE, // Undefined table
-  '42703': ErrorType.DATABASE, // Undefined column
-  'PGRST301': ErrorType.AUTH, // Unauthorized
-  'PGRST302': ErrorType.PERMISSION, // Forbidden
+// Toast options type
+type ToasterToast = ToastProps & {
+  id?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
 };
 
-// Error messages
+// User-safe error messages
 const ERROR_MESSAGES: Record<ErrorType, string> = {
-  [ErrorType.VALIDATION]: 'Please check your input and try again',
-  [ErrorType.NETWORK]: 'Network error. Please check your connection',
-  [ErrorType.AUTH]: 'Authentication error. Please sign in again',
-  [ErrorType.DATABASE]: 'Database error occurred',
-  [ErrorType.NOT_FOUND]: 'The requested resource was not found',
-  [ErrorType.PERMISSION]: 'You do not have permission to perform this action',
-  [ErrorType.WORKFLOW]: 'Invalid workflow state transition',
-  [ErrorType.TEAM]: 'Team management operation failed',
-  [ErrorType.UNKNOWN]: 'An unexpected error occurred'
+  [ErrorType.VALIDATION]: 'The provided input is invalid',
+  [ErrorType.NETWORK]: 'Unable to connect. Please check your connection',
+  [ErrorType.AUTH]: 'Please sign in to continue',
+  [ErrorType.DATABASE]: 'Unable to process request',
+  [ErrorType.NOT_FOUND]: 'The requested item was not found',
+  [ErrorType.PERMISSION]: 'Access denied',
+  [ErrorType.WORKFLOW]: 'Invalid operation for current status',
+  [ErrorType.TEAM]: 'Team operation failed',
+  [ErrorType.RATE_LIMIT]: 'Too many requests. Please try again later',
+  [ErrorType.SECURITY]: 'Security check failed',
+  [ErrorType.CONFIG]: 'System configuration error',
+  [ErrorType.RETRYABLE]: 'Operation failed, please try again',
+  [ErrorType.UNKNOWN]: 'An error occurred'
 };
 
-// Error handler class
-export class AppError extends Error {
-  constructor(
-    message: string,
-    public type: ErrorType = ErrorType.UNKNOWN,
-    public details?: any,
-    public retry?: () => Promise<any>
-  ) {
-    super(message);
-    this.name = 'AppError';
+// Rate limiting for retries
+class RateLimiter {
+  private attempts: Map<string, number> = new Map();
+  private timestamps: Map<string, number> = new Map();
+  private readonly maxAttempts = 5;
+  private readonly timeWindow = 60000; // 1 minute
+
+  canRetry(key: string): boolean {
+    const now = Date.now();
+    const lastAttempt = this.timestamps.get(key) || 0;
+    const attempts = this.attempts.get(key) || 0;
+
+    // Reset if outside time window
+    if (now - lastAttempt > this.timeWindow) {
+      this.attempts.delete(key);
+      this.timestamps.delete(key);
+      return true;
+    }
+
+    return attempts < this.maxAttempts;
   }
 
-  static isAppError(error: unknown): error is AppError {
-    return error instanceof AppError;
+  recordAttempt(key: string): void {
+    const attempts = (this.attempts.get(key) || 0) + 1;
+    this.attempts.set(key, attempts);
+    this.timestamps.set(key, Date.now());
   }
 }
 
-// Error handler function
-export function handleError(error: unknown): AppError {
-  console.error('Error:', error);
+const rateLimiter = new RateLimiter();
 
-  if (AppError.isAppError(error)) {
+// Create rate-limited retry function
+function createRateLimitedRetry() {
+  const retryKey = Date.now().toString();
+  
+  return async function rateLimitedRetry(): Promise<never> {
+    if (!rateLimiter.canRetry(retryKey)) {
+      throw new SecurityError(
+        ERROR_MESSAGES[ErrorType.RATE_LIMIT]
+      );
+    }
+    
+    rateLimiter.recordAttempt(retryKey);
+    throw new Error('Retry not implemented');
+  };
+}
+
+// Error handler function with improved security
+export function handleError(error: unknown): AppError {
+  if (isAppError(error)) {
     return error;
   }
 
   if (error instanceof Error) {
     // Handle Supabase errors
     if ('code' in error && typeof error.code === 'string') {
-      const errorType = ERROR_CODES[error.code] || ErrorType.UNKNOWN;
+      if (error.code.startsWith('PGRST')) {
+        return new SecurityError(
+          ERROR_MESSAGES[ErrorType.PERMISSION],
+          { code: error.code }
+        );
+      }
       return new AppError(
-        error.message,
-        errorType,
-        { code: error.code }
+        ERROR_MESSAGES[ErrorType.DATABASE],
+        ErrorType.DATABASE,
+        ErrorSeverity.ERROR,
+        error.code
       );
     }
 
-    // Handle network errors
+    // Handle network errors with rate limiting
     if (error.name === 'NetworkError' || error.message.includes('network')) {
-      return new AppError(
-        'Network error occurred',
-        ErrorType.NETWORK,
-        undefined,
-        async () => {
-          // Implement retry logic here
-          throw new Error('Retry not implemented');
-        }
+      return new NetworkError(
+        ERROR_MESSAGES[ErrorType.NETWORK],
+        createRateLimitedRetry()
       );
     }
 
     // Handle validation errors
-    if (error.name === 'ValidationError' || error.message.includes('validation')) {
-      return new AppError(
-        error.message,
-        ErrorType.VALIDATION
+    if (error.name === 'ValidationError') {
+      return new ValidationError(
+        ERROR_MESSAGES[ErrorType.VALIDATION]
       );
     }
 
-    // Handle workflow errors
-    if (error.message.includes('workflow') || error.message.includes('status')) {
-      return new AppError(
-        error.message,
-        ErrorType.WORKFLOW
-      );
-    }
-
-    // Handle team errors
-    if (error.message.includes('team') || error.message.includes('member')) {
-      return new AppError(
-        error.message,
-        ErrorType.TEAM
-      );
-    }
-
-    return new AppError(error.message);
+    return new AppError(
+      ERROR_MESSAGES[ErrorType.UNKNOWN],
+      ErrorType.UNKNOWN,
+      ErrorSeverity.ERROR
+    );
   }
 
-  return new AppError('An unexpected error occurred');
+  return new AppError(
+    ERROR_MESSAGES[ErrorType.UNKNOWN],
+    ErrorType.UNKNOWN,
+    ErrorSeverity.ERROR
+  );
 }
 
-// Toast error handler with retry support
-export function showErrorToast(error: unknown) {
+// Toast error handler with improved security
+export function showErrorToast(error: unknown): AppError {
   const appError = handleError(error);
   
-  const toastOptions: any = {
-    title: appError.type,
-    description: appError.message || ERROR_MESSAGES[appError.type],
-    variant: 'destructive',
+  const toastOptions: ToasterToast = {
+    title: ERROR_MESSAGES[appError.type],
+    description: appError.message,
+    variant: appError.severity === ErrorSeverity.CRITICAL ? 'destructive' : 'default',
   };
 
-  if (appError.retry) {
-    toastOptions.action = {
-      label: 'Retry',
+  if ((isRetryable(appError) || isNetworkError(appError)) && appError.retry) {
+    // Show retry message in description
+    toastOptions.description = `${toastOptions.description}. Click to retry.`;
+    toast({
+      ...toastOptions,
       onClick: () => appError.retry?.()
-    };
+    });
+  } else {
+    toast(toastOptions);
   }
-
-  toast(toastOptions);
 
   return appError;
 }
 
-// Async error wrapper with retry support
+// Async error wrapper with exponential backoff
 export async function withErrorHandling<T>(
   fn: () => Promise<T>,
   options: {
     showToast?: boolean;
     rethrow?: boolean;
     maxRetries?: number;
-    retryDelay?: number;
-  } = { showToast: true, rethrow: false, maxRetries: 3, retryDelay: 1000 }
+    baseDelay?: number;
+  } = {}
 ): Promise<T> {
+  const {
+    showToast = true,
+    rethrow = false,
+    maxRetries = 3,
+    baseDelay = 1000
+  } = options;
+
   let attempts = 0;
 
   const attempt = async (): Promise<T> => {
@@ -157,18 +185,25 @@ export async function withErrorHandling<T>(
       attempts++;
       const appError = handleError(error);
       
-      if (attempts < (options.maxRetries || 3) && 
-          (appError.type === ErrorType.NETWORK || appError.type === ErrorType.DATABASE)) {
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, options.retryDelay || 1000));
+      const shouldRetry = 
+        attempts < maxRetries &&
+        (isNetworkError(appError) || isRetryable(appError));
+
+      if (shouldRetry) {
+        // Exponential backoff with jitter
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attempts - 1) + Math.random() * 1000,
+          30000 // Max 30 seconds
+        );
+        await new Promise(resolve => setTimeout(resolve, delay));
         return attempt();
       }
       
-      if (options.showToast) {
+      if (showToast) {
         showErrorToast(appError);
       }
       
-      if (options.rethrow) {
+      if (rethrow) {
         throw appError;
       }
       
@@ -177,20 +212,4 @@ export async function withErrorHandling<T>(
   };
 
   return attempt();
-}
-
-// Validation helper
-export function validateWorkflowTransition(
-  currentStatus: string,
-  newStatus: string
-): boolean {
-  const validTransitions: Record<string, string[]> = {
-    draft: ['review', 'archived'],
-    review: ['approved', 'rejected', 'archived'],
-    approved: ['archived'],
-    rejected: ['draft', 'archived'],
-    archived: ['draft']
-  };
-
-  return validTransitions[currentStatus]?.includes(newStatus) || false;
 }

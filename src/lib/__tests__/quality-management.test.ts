@@ -32,6 +32,31 @@ describe('Quality Management System', () => {
         field: 'name'
       })).toThrow('Invalid severity level');
     });
+
+    // New tests for input validation
+    it('should sanitize rule name and description', () => {
+      const rule = createRule({
+        name: '<script>alert("xss")</script>Name',
+        description: '<img src="x" onerror="alert(1)">Desc',
+        severity: 'error',
+        condition: 'required',
+        field: 'test'
+      });
+
+      expect(rule.name).not.toContain('<script>');
+      expect(rule.description).not.toContain('<img');
+    });
+
+    it('should validate pattern complexity', () => {
+      expect(() => createRule({
+        name: 'Complex Pattern',
+        description: 'Test',
+        severity: 'error',
+        condition: 'pattern',
+        field: 'test',
+        value: '(a+)+b' // catastrophic backtracking pattern
+      })).toThrow('Pattern too complex');
+    });
   });
 
   describe('validateEntry', () => {
@@ -129,6 +154,52 @@ describe('Quality Management System', () => {
 
       const violations = validateEntry(entry, disabledRules);
       expect(violations).toHaveLength(0);
+    });
+
+    // New performance tests
+    it('should handle large entries efficiently', () => {
+      const largeEntry = {
+        name: 'Test',
+        description: 'A'.repeat(10000),
+        type: 'string'
+      };
+      
+      const start = performance.now();
+      validateEntry(largeEntry, mockRules);
+      const duration = performance.now() - start;
+      
+      expect(duration).toBeLessThan(100); // Should complete within 100ms
+    });
+
+    it('should handle many rules efficiently', () => {
+      const manyRules = Array(1000).fill(null).map((_, i) => ({
+        ...mockRules[0],
+        id: `rule${i}`,
+        field: `field${i}`
+      }));
+
+      const entry = { name: 'Test' };
+      
+      const start = performance.now();
+      validateEntry(entry, manyRules);
+      const duration = performance.now() - start;
+      
+      expect(duration).toBeLessThan(200); // Should complete within 200ms
+    });
+
+    // New security tests
+    it('should handle malicious patterns safely', () => {
+      const maliciousRule = {
+        ...mockRules[2],
+        value: '(.*?){100}' // Potentially catastrophic pattern
+      };
+
+      const entry = {
+        name: 'Test',
+        description: 'A'.repeat(1000)
+      };
+
+      expect(() => validateEntry(entry, [maliciousRule])).toThrow('Pattern evaluation timeout');
     });
   });
 });

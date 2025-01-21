@@ -2,32 +2,40 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDictionaries } from '@/hooks/use-dictionaries'
 import { useDictionaryEntries } from '@/hooks/use-dictionary-entries'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CreateEntryDialog } from '@/components/create-entry-dialog'
 import { EditEntryDialog } from '@/components/edit-entry-dialog'
 import { CommentsSection } from '@/components/comments-section'
-import { Loader2, Plus } from 'lucide-react'
-import type { Database } from '@/types/supabase'
+import { Loader2 } from 'lucide-react'
 
-type Dictionary = Database['public']['Tables']['dictionaries']['Row']
-type DictionaryEntry = Database['public']['Tables']['dictionary_entries']['Row']
-
-interface DictionaryEntriesData {
-  entries: DictionaryEntry[]
+interface DictionaryEntry {
+  id: string;
+  dictionary_id: string;
+  field_name: string;
+  data_type: string;
+  description: string | null;
+  sample_values: any[];
+  metadata: Record<string, any>;
+  workflow_status: string;
+  created_at: string;
+  created_by: string;
 }
 
 export function DictionaryView() {
   const { dictionaryId = '' } = useParams<{ dictionaryId: string }>()
   const { data: dictionaries = [], isLoading: isDictionaryLoading } = useDictionaries()
-  const { data: entriesData, isLoading: isEntriesLoading } = useDictionaryEntries(dictionaryId)
+  const { data: entriesData, isLoading: isEntriesLoading } = useDictionaryEntries({
+    dictionaryId,
+    page: 0,
+    pageSize: 50,
+    sortField: 'created_at',
+    sortDirection: 'desc'
+  })
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
-  const dictionary = dictionaries.find((d) => d.id === dictionaryId)
-  const entries = (entriesData as DictionaryEntriesData)?.entries || []
+  const dictionary = dictionaries?.find((d) => d.id === dictionaryId)
+  const entries: DictionaryEntry[] = entriesData?.entries ?? []
 
   useEffect(() => {
     // Reset selected entry when dictionary changes
@@ -50,16 +58,13 @@ export function DictionaryView() {
     )
   }
 
-  const selectedEntryData = entries.find((entry) => entry.id === selectedEntry)
+  const selectedEntryData: DictionaryEntry | undefined = entries.find((entry) => entry.id === selectedEntry)
 
   return (
     <div className="container mx-auto p-4 space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">{dictionary.name}</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Entry
-        </Button>
+        <CreateEntryDialog dictionaryId={dictionaryId} />
       </div>
 
       <div className="grid grid-cols-12 gap-4">
@@ -73,9 +78,9 @@ export function DictionaryView() {
               }`}
               onClick={() => setSelectedEntry(entry.id)}
             >
-              <h3 className="font-semibold">{entry.term}</h3>
+              <h3 className="font-semibold">{entry.field_name}</h3>
               <p className="text-sm text-muted-foreground truncate">
-                {entry.definition}
+                {entry.description}
               </p>
             </Card>
           ))}
@@ -87,12 +92,14 @@ export function DictionaryView() {
             <Card className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">{selectedEntryData.term}</h2>
-                  <p className="text-muted-foreground">{selectedEntryData.definition}</p>
+                  <h2 className="text-2xl font-bold mb-2">{selectedEntryData.field_name}</h2>
+                  <p className="text-muted-foreground">{selectedEntryData.description}</p>
                 </div>
-                <Button onClick={() => setIsEditDialogOpen(true)}>
-                  Edit Entry
-                </Button>
+                <EditEntryDialog
+                  entry={selectedEntryData}
+                  onClose={() => {}}
+                  onSuccess={() => setSelectedEntry(null)}
+                />
               </div>
 
               <Tabs defaultValue="comments">
@@ -120,20 +127,6 @@ export function DictionaryView() {
           )}
         </div>
       </div>
-
-      <CreateEntryDialog
-        dictionaryId={dictionaryId}
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-      />
-
-      {selectedEntryData && (
-        <EditEntryDialog
-          entry={selectedEntryData}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-        />
-      )}
     </div>
   )
 }

@@ -26,7 +26,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Function to help diagnose schema issues
 export const checkSupabaseTableSchema = async (tableName: string) => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from(tableName)
       .select('*')
       .limit(0);

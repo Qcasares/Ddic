@@ -228,7 +228,7 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
           table: 'comments',
           filter: `commentable_id=eq.${commentableId}`
         },
-        (payload) => {
+        () => {
           // Refresh comments when changes occur
           fetchComments()
         }
