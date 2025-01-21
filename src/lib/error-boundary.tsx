@@ -34,6 +34,9 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
 
+    // Clean up any pending requests
+    requestBatcher.clear();
+
     // Report error
     this.reportError(error, errorInfo);
 

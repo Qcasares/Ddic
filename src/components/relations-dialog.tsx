@@ -32,7 +32,13 @@ interface RelationsDialogProps {
 export function RelationsDialog({ entry, onClose, onSuccess }: RelationsDialogProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [fields, setFields] = useState<any[]>([]);
+  interface Field {
+    id: string;
+    field_name: string;
+    data_type: string;
+  }
+  
+  const [fields, setFields] = useState<Field[]>([]);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);

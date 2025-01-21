@@ -20,9 +20,25 @@ interface SearchDialogProps {
 export function SearchDialog({ onSearch }: SearchDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const handleSearch = (criteria: any) => {
-    onSearch(criteria);
-    setOpen(false);
+  const handleSearch = (criteria: SearchCriteria[]) => {
+    try {
+      if (!Array.isArray(criteria)) {
+        throw new Error('Search criteria must be an array');
+      }
+      
+      if (criteria.length === 0) {
+        throw new Error('At least one search criterion is required');
+      }
+
+      onSearch(criteria);
+      setOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Search Error',
+        description: error instanceof Error ? error.message : 'Failed to perform search',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (

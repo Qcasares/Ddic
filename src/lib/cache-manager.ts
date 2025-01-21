@@ -50,6 +50,18 @@ class CacheManager {
     fetcher: () => Promise<T>,
     ttl: number = this.defaultTTL
   ): Promise<T> {
+    if (!key) {
+      throw new Error('Cache key is required');
+    }
+
+    if (typeof fetcher !== 'function') {
+      throw new Error('Fetcher must be a function');
+    }
+
+    if (ttl < 0) {
+      throw new Error('TTL must be non-negative');
+    }
+
     try {
       // Check cache first
       const cached = this.cache.get(key);
