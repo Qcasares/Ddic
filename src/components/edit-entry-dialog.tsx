@@ -35,8 +35,17 @@ const DATA_TYPES = [
   'null',
 ] as const;
 
+interface EntryBase {
+  id: string;
+  field_name: string;
+  data_type: typeof DATA_TYPES[number];
+  description?: string;
+  sample_values?: unknown[];
+  metadata?: Record<string, { value: unknown; type: string }>;
+}
+
 interface EditEntryDialogProps {
-  entry: any;
+  entry: EntryBase | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
