@@ -115,7 +115,7 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
           </Badge>
         );
     }
-  };
+  });
 
   if (isLoading) {
     return (
