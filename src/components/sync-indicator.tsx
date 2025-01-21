@@ -20,6 +20,7 @@ export function SyncIndicator({
   lastSyncedAt, 
   error 
 }: SyncIndicatorProps) {
+  const [showDetails, setShowDetails] = useState(false);
   if (error) {
     return (
       <Tooltip>

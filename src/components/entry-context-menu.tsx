@@ -26,6 +26,8 @@ interface EntryContextMenuProps {
   onShare?: () => void;
   onView?: () => void;
   onComment?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
 }
 
 export function EntryContextMenu({

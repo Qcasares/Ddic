@@ -9,9 +9,18 @@ export function DataCatalog() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredAssets = useMemo(() => {
-    return dataAssets.filter((asset: DataAsset) =>
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    if (!Array.isArray(dataAssets)) {
+      console.error('Invalid dataAssets format');
+      return [];
+    }
+
+    return dataAssets.filter((asset: DataAsset) => {
+      if (!asset?.name || typeof asset.name !== 'string') {
+        console.warn('Invalid asset name:', asset);
+        return false;
+      }
+      return asset.name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
   }, [dataAssets, searchTerm]);
 
   return (

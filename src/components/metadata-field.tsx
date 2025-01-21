@@ -22,7 +22,8 @@ interface MetadataEditorProps {
 export function MetadataEditor({ metadata, onChange, disabled = false }: MetadataEditorProps) {
   const [error, setError] = useState<string | null>(null);
 
-  const addField = useCallback(() => {
+  const addField = useCallback((e?: React.MouseEvent) => {
+    e?.preventDefault();
     onChange([
       ...metadata,
       { key: '', value: '', type: 'string' },

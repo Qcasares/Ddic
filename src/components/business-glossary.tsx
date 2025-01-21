@@ -91,7 +91,7 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
     fetchTerms();
   }, [dictionaryId, debouncedSearch, toast]);
 
-  const getStatusBadge = useCallback((status: string) => {
+  const getStatusBadge = useCallback((status: string = 'draft') => {
     switch (status) {
       case 'approved':
         return (
