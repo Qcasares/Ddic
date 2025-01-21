@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface SyncStatus {
   isSyncing: boolean;
@@ -31,6 +33,7 @@ export function useRealtimeSync<T>(
   const offlineChanges = useRef<any[]>([]);
   const updateTimeoutRef = useRef<number | null>(null);
   const isInitialMount = useRef(true);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   // Hooks that depend on other hooks
   const { toast } = useToast();
@@ -139,19 +142,35 @@ export function useRealtimeSync<T>(
       return;
     }
 
-    // const cleanup = realtimeManager.subscribe(
-    //   channelName,
-    //   table,
-    //   handleUpdate,
-    //   handleError,
-    //   handleConnectionChange
-    // );
+    // Set up Supabase realtime subscription
+    channelRef.current = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: table
+        },
+        () => {
+          handleUpdate();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          handleConnectionChange('CONNECTED');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          handleConnectionChange('DISCONNECTED');
+        }
+      });
 
     return () => {
       if (updateTimeoutRef.current !== null) {
         window.clearTimeout(updateTimeoutRef.current);
       }
-      // cleanup();
+      if (channelRef.current) {
+        channelRef.current.unsubscribe();
+      }
     };
   }, [channelName, table, handleUpdate, handleError, handleConnectionChange]);
 

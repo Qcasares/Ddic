@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 // Ensure you have these environment variables set in your .env file
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -8,16 +9,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  db: {
-    schema: 'public', // Explicitly set the schema
-  },
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
   },
   global: {
     headers: {
-      // Explicitly specify the columns to avoid schema cache issues
       'Prefer': 'return=representation'
     }
   }
