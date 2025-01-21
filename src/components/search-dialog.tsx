@@ -11,8 +11,10 @@ import {
 import { Filter } from 'lucide-react';
 import { AdvancedSearch } from './advanced-search';
 
+import type { SearchCriteria } from '@/components/advanced-search';
+
 interface SearchDialogProps {
-  onSearch: (criteria: any) => void;
+  onSearch: (criteria: SearchCriteria[]) => void;
 }
 
 export function SearchDialog({ onSearch }: SearchDialogProps) {

@@ -19,8 +19,13 @@ import {
   Command
 } from 'lucide-react';
 
+interface Dictionary {
+  id: string;
+  name: string;
+}
+
 interface CommandPaletteProps {
-  dictionaries: any[];
+  dictionaries: Dictionary[];
   onNavigate: (path: string) => void;
   onSelectDictionary: (id: string) => void;
 }

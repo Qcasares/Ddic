@@ -16,8 +16,15 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
 
+interface DictionaryEntry {
+  id: string;
+  field_name: string;
+  dictionary_id: string;
+  related_fields?: string[];
+}
+
 interface RelationsDialogProps {
-  entry: any;
+  entry: DictionaryEntry;
   onClose: () => void;
   onSuccess?: () => void;
 }
