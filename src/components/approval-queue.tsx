@@ -24,16 +24,6 @@ interface QueueEntry {
   };
 }
 
-interface SupabaseEntry {
-  id: string;
-  field_name: string;
-  workflow_status: string | null;
-  created_at: string | null;
-  created_by: string | null;
-  users: {
-    email: string;
-  } | null;
-}
 
 export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProps) {
   const [entries, setEntries] = useState<QueueEntry[]>([]);
