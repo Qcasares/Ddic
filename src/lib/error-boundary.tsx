@@ -36,6 +36,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Clean up any pending requests
     requestBatcher.clear();
+    
+    // Clear any cached data that might be stale
+    cacheManager.clear();
 
     // Report error
     this.reportError(error, errorInfo);

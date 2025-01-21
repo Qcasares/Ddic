@@ -50,8 +50,16 @@ class CacheManager {
     fetcher: () => Promise<T>,
     ttl: number = this.defaultTTL
   ): Promise<T> {
-    if (!key) {
-      throw new Error('Cache key is required');
+    if (!key?.trim()) {
+      throw new Error('Cache key cannot be empty');
+    }
+
+    if (typeof fetcher !== 'function') {
+      throw new Error('Fetcher must be a function');
+    }
+
+    if (ttl < 0 || !Number.isFinite(ttl)) {
+      throw new Error('TTL must be a non-negative finite number');
     }
 
     if (typeof fetcher !== 'function') {
