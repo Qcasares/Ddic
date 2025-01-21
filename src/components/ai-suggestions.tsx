@@ -52,7 +52,19 @@ export function AISuggestions({ dictionaryId }: { dictionaryId: string }) {
         throw new Error('Invalid suggestions format');
       }
 
-      setSuggestions(newSuggestions);
+      // Validate suggestion structure
+      const validSuggestions = newSuggestions.filter(suggestion => 
+        typeof suggestion === 'object' && 
+        suggestion !== null &&
+        'name' in suggestion &&
+        'description' in suggestion
+      );
+
+      if (validSuggestions.length === 0) {
+        throw new Error('No valid suggestions generated');
+      }
+
+      setSuggestions(validSuggestions);
     } catch (error) {
       console.error('Error generating suggestions:', error);
       toast({

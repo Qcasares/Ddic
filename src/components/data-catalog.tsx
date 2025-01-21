@@ -19,7 +19,12 @@ export function DataCatalog() {
         console.warn('Invalid asset name:', asset);
         return false;
       }
-      return asset.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Check if search term matches name, description or tags
+      const searchLower = searchTerm.toLowerCase();
+      return asset.name.toLowerCase().includes(searchLower) ||
+             asset.description.toLowerCase().includes(searchLower) ||
+             asset.tags.some(tag => tag.toLowerCase().includes(searchLower));
     });
   }, [dataAssets, searchTerm]);
 

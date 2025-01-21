@@ -48,6 +48,7 @@ export function EntryActions({
   const { toast } = useToast();
 
   const handleDelete = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     try {
       setIsDeleting(true);

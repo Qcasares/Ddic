@@ -28,6 +28,8 @@ interface EntryContextMenuProps {
   onComment?: () => void;
   disabled?: boolean;
   loading?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function EntryContextMenu({

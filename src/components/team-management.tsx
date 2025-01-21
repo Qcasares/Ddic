@@ -48,7 +48,8 @@ export function TeamManagement({ dictionaryId }: TeamManagementProps) {
   const { data: team, isLoading: isLoadingTeam, refetch } = useTeam({ dictionaryId });
   const { toast } = useToast();
 
-  const handleInvite = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleInvite = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
     e.preventDefault();
 
     try {

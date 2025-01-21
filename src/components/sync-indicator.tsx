@@ -21,6 +21,7 @@ export function SyncIndicator({
   error 
 }: SyncIndicatorProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   if (error) {
     return (
       <Tooltip>

@@ -14,7 +14,7 @@ interface VirtualizedListProps<T> {
   offsetY: number;
 }
 
-export const VirtualizedList = forwardRef<HTMLDivElement, VirtualizedListProps<any>>(
+export const VirtualizedList = forwardRef<HTMLDivElement, VirtualizedListProps<unknown>>(
   function VirtualizedList(
     {
       items,
