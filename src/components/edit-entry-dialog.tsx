@@ -93,11 +93,6 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
         throw new Error('Supabase client not initialized');
       }
 
-      // Convert metadata to JSON string for Supabase storage
-      const supabaseMetadata = validatedData.metadata ? 
-        JSON.stringify(validatedData.metadata) : 
-        null;
-
       // Validate entry ID exists
       if (!entry?.id) {
         throw new Error('Invalid entry ID for update operation');
