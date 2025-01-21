@@ -18,14 +18,14 @@ import {
 
 interface EntryContextMenuProps {
   children: React.ReactNode;
-  onEdit: () => void;
-  onDelete: () => void;
-  onViewHistory: () => void;
-  onManageRelations: () => void;
-  onCopy: () => void;
-  onShare: () => void;
-  onView: () => void;
-  onComment: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onViewHistory?: () => void;
+  onManageRelations?: () => void;
+  onCopy?: () => void;
+  onShare?: () => void;
+  onView?: () => void;
+  onComment?: () => void;
 }
 
 export function EntryContextMenu({

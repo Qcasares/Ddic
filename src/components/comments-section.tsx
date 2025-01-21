@@ -29,7 +29,7 @@ export function CommentsSection({ entryId, fieldName }: CommentsSectionProps) {
     deleteComment
   } = useComments({ entryId, fieldName })
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newComment.trim()) return
 

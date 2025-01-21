@@ -14,7 +14,12 @@ interface SyncIndicatorProps {
   error: Error | null;
 }
 
-export function SyncIndicator({ isSyncing, isOnline, lastSyncedAt, error }: SyncIndicatorProps) {
+export function SyncIndicator({ 
+  isSyncing, 
+  isOnline, 
+  lastSyncedAt, 
+  error 
+}: SyncIndicatorProps) {
   if (error) {
     return (
       <Tooltip>

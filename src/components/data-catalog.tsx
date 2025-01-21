@@ -8,9 +8,11 @@ export function DataCatalog() {
   const { dataAssets, isLoading } = useDataAssets();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredAssets = dataAssets.filter((asset: DataAsset) =>
-    asset.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAssets = useMemo(() => {
+    return dataAssets.filter((asset: DataAsset) =>
+      asset.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [dataAssets, searchTerm]);
 
   return (
     <Card>

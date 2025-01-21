@@ -14,15 +14,34 @@ export function AISuggestions({ dictionaryId }: { dictionaryId: string }) {
   const [suggestions, setSuggestions] = useState<FieldSuggestion[]>([]);
 
   const handleGenerateSuggestions = async () => {
-    const existingFields: string[] = data?.entries
-      .map(entry => ('name' in entry ? entry.name : ''))
-      .filter((name): name is string => typeof name === 'string' && name.length > 0) || [];
+    try {
+      if (!data?.entries) {
+        throw new Error('No dictionary entries found');
+      }
+
+      const existingFields: string[] = data.entries
+        .map(entry => {
+          if (typeof entry === 'object' && entry !== null && 'name' in entry) {
+            return entry.name;
+          }
+          return '';
+        })
+        .filter((name): name is string => typeof name === 'string' && name.length > 0);
+
+      const newSuggestions = await generateFieldSuggestions(
+        { id: dictionaryId, name: 'Dictionary' },
+        existingFields
+      );
       
-    const newSuggestions = await generateFieldSuggestions(
-      { id: dictionaryId, name: 'Dictionary' },
-      existingFields
-    );
-    setSuggestions(newSuggestions);
+      setSuggestions(newSuggestions);
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to generate suggestions',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

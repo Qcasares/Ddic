@@ -22,7 +22,7 @@ interface MetadataEditorProps {
 export function MetadataEditor({ metadata, onChange, disabled = false }: MetadataEditorProps) {
   const [error, setError] = useState<string | null>(null);
 
-  const addField = () => {
+  const addField = useCallback(() => {
     onChange([
       ...metadata,
       { key: '', value: '', type: 'string' },
