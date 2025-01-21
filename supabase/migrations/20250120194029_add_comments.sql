@@ -1,43 +1,71 @@
 -- Drop existing comments table if it exists
 DROP TABLE IF EXISTS comments CASCADE;
 
--- Create comments table
+-- Create comments table with polymorphic association
 CREATE TABLE comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    entry_id UUID NOT NULL,
+    commentable_id UUID NOT NULL,
+    commentable_type TEXT NOT NULL,
     author_id UUID NOT NULL,
     text TEXT NOT NULL,
+    field_name TEXT, -- Optional field name for field-specific comments
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    FOREIGN KEY (entry_id) REFERENCES dictionary_entries(id) ON DELETE CASCADE,
     FOREIGN KEY (author_id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
 -- Add RLS policies
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 
--- Allow users to view comments if they have access to the dictionary
+-- Create indexes for performance
+CREATE INDEX comments_commentable_idx ON comments(commentable_id, commentable_type);
+CREATE INDEX comments_author_id_idx ON comments(author_id);
+CREATE INDEX comments_field_name_idx ON comments(field_name);
+
+-- Allow users to view comments if they have access to the commentable object
 CREATE POLICY "Users can view comments" ON comments
     FOR SELECT
     USING (
-        EXISTS (
-            SELECT 1 FROM dictionary_entries e
-            JOIN team_members tm ON e.dictionary_id = tm.dictionary_id
-            WHERE e.id = comments.entry_id
-            AND tm.user_id = auth.uid()
-        )
+        CASE
+            WHEN commentable_type = 'dictionary_entries' THEN
+                EXISTS (
+                    SELECT 1 FROM dictionary_entries e
+                    JOIN team_members tm ON e.dictionary_id = tm.dictionary_id
+                    WHERE e.id = commentable_id
+                    AND tm.user_id = auth.uid()
+                )
+            WHEN commentable_type = 'quality_rules' THEN
+                EXISTS (
+                    SELECT 1 FROM quality_rules qr
+                    JOIN team_members tm ON qr.dictionary_id = tm.dictionary_id
+                    WHERE qr.id = commentable_id
+                    AND tm.user_id = auth.uid()
+                )
+            ELSE false
+        END
     );
 
--- Allow users to create comments if they have access to the dictionary
+-- Allow users to create comments if they have access to the commentable object
 CREATE POLICY "Users can create comments" ON comments
     FOR INSERT
     WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM dictionary_entries e
-            JOIN team_members tm ON e.dictionary_id = tm.dictionary_id
-            WHERE e.id = comments.entry_id
-            AND tm.user_id = auth.uid()
-        )
+        CASE
+            WHEN commentable_type = 'dictionary_entries' THEN
+                EXISTS (
+                    SELECT 1 FROM dictionary_entries e
+                    JOIN team_members tm ON e.dictionary_id = tm.dictionary_id
+                    WHERE e.id = commentable_id
+                    AND tm.user_id = auth.uid()
+                )
+            WHEN commentable_type = 'quality_rules' THEN
+                EXISTS (
+                    SELECT 1 FROM quality_rules qr
+                    JOIN team_members tm ON qr.dictionary_id = tm.dictionary_id
+                    WHERE qr.id = commentable_id
+                    AND tm.user_id = auth.uid()
+                )
+            ELSE false
+        END
     );
 
 -- Allow users to update their own comments
@@ -64,7 +92,3 @@ CREATE TRIGGER update_comments_updated_at
     BEFORE UPDATE ON comments
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
--- Create index for performance
-CREATE INDEX comments_entry_id_idx ON comments(entry_id);
-CREATE INDEX comments_author_id_idx ON comments(author_id);

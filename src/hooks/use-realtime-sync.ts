@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { realtimeManager } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface SyncStatus {
@@ -135,19 +134,19 @@ export function useRealtimeSync<T>(
       return;
     }
 
-    const cleanup = realtimeManager.subscribe(
-      channelName, 
-      table, 
-      handleUpdate, 
-      handleError,
-      handleConnectionChange
-    );
+    // const cleanup = realtimeManager.subscribe(
+    //   channelName,
+    //   table,
+    //   handleUpdate,
+    //   handleError,
+    //   handleConnectionChange
+    // );
 
     return () => {
       if (updateTimeoutRef.current !== null) {
         window.clearTimeout(updateTimeoutRef.current);
       }
-      cleanup();
+      // cleanup();
     };
   }, [channelName, table, handleUpdate, handleError, handleConnectionChange]);
 

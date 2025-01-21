@@ -1,3 +1,11 @@
+-- Drop table if exists
+DROP TABLE IF EXISTS quality_rules;
+DROP TABLE IF EXISTS quality_violations;
+
+-- Drop enum types for severity and condition if they exist
+DROP TYPE IF EXISTS quality_rule_severity;
+DROP TYPE IF EXISTS quality_rule_condition;
+
 -- Create enum types for severity and condition
 CREATE TYPE quality_rule_severity AS ENUM ('error', 'warning', 'info');
 CREATE TYPE quality_rule_condition AS ENUM ('required', 'minLength', 'maxLength', 'pattern', 'enum');
@@ -28,6 +36,7 @@ CREATE INDEX quality_rules_dictionary_id_idx ON quality_rules(dictionary_id);
 ALTER TABLE quality_rules ENABLE ROW LEVEL SECURITY;
 
 -- Users can view quality rules if they have access to the dictionary
+DROP POLICY IF EXISTS "Users can view quality rules" ON quality_rules;
 CREATE POLICY "Users can view quality rules" ON quality_rules
     FOR SELECT
     USING (
@@ -39,6 +48,7 @@ CREATE POLICY "Users can view quality rules" ON quality_rules
     );
 
 -- Only editors can create/update/delete quality rules
+DROP POLICY IF EXISTS "Editors can create quality rules" ON quality_rules;
 CREATE POLICY "Editors can create quality rules" ON quality_rules
     FOR INSERT
     WITH CHECK (
@@ -50,6 +60,7 @@ CREATE POLICY "Editors can create quality rules" ON quality_rules
         )
     );
 
+DROP POLICY IF EXISTS "Editors can update quality rules" ON quality_rules;
 CREATE POLICY "Editors can update quality rules" ON quality_rules
     FOR UPDATE
     USING (
@@ -61,6 +72,7 @@ CREATE POLICY "Editors can update quality rules" ON quality_rules
         )
     );
 
+DROP POLICY IF EXISTS "Editors can delete quality rules" ON quality_rules;
 CREATE POLICY "Editors can delete quality rules" ON quality_rules
     FOR DELETE
     USING (
@@ -82,15 +94,11 @@ CREATE TABLE quality_violations (
     severity quality_rule_severity NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     resolved_at TIMESTAMP WITH TIME ZONE,
-    resolved_by UUID REFERENCES auth.users(id),
-
-    -- Add indexes for common queries
-    CONSTRAINT quality_violations_unique_active_violation 
-        UNIQUE (entry_id, rule_id) 
-        WHERE resolved_at IS NULL
+    resolved_by UUID REFERENCES auth.users(id)
 );
 
 -- Create indexes for performance
+CREATE UNIQUE INDEX quality_violations_unique_active_violation ON quality_violations(entry_id, rule_id) WHERE resolved_at IS NULL;
 CREATE INDEX quality_violations_entry_id_idx ON quality_violations(entry_id);
 CREATE INDEX quality_violations_rule_id_idx ON quality_violations(rule_id);
 CREATE INDEX quality_violations_resolved_idx ON quality_violations(resolved_at) 
@@ -100,6 +108,7 @@ CREATE INDEX quality_violations_resolved_idx ON quality_violations(resolved_at)
 ALTER TABLE quality_violations ENABLE ROW LEVEL SECURITY;
 
 -- Users can view violations if they have access to the dictionary
+DROP POLICY IF EXISTS "Users can view quality violations" ON quality_violations;
 CREATE POLICY "Users can view quality violations" ON quality_violations
     FOR SELECT
     USING (
@@ -112,6 +121,7 @@ CREATE POLICY "Users can view quality violations" ON quality_violations
     );
 
 -- Editors can resolve violations
+DROP POLICY IF EXISTS "Editors can resolve violations" ON quality_violations;
 CREATE POLICY "Editors can resolve violations" ON quality_violations
     FOR UPDATE
     USING (
@@ -134,6 +144,7 @@ END;
 $$ language 'plpgsql';
 
 -- Create trigger for updated_at
+DROP TRIGGER IF EXISTS update_quality_rules_timestamp ON quality_rules;
 CREATE TRIGGER update_quality_rules_timestamp
     BEFORE UPDATE ON quality_rules
     FOR EACH ROW
@@ -169,6 +180,7 @@ END;
 $$ language 'plpgsql';
 
 -- Create trigger for automatic violation recording
+DROP TRIGGER IF EXISTS record_quality_violation ON dictionary_entries;
 CREATE TRIGGER record_quality_violation
     AFTER INSERT ON dictionary_entries
     FOR EACH ROW

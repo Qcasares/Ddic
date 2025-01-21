@@ -1,3 +1,7 @@
+-- Add is_public column to dictionaries table
+ALTER TABLE public.dictionaries 
+ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+
 -- Quality rules table
 CREATE TABLE IF NOT EXISTS public.quality_rules (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -30,7 +34,30 @@ CREATE INDEX IF NOT EXISTS idx_quality_scores_entry_id ON public.quality_scores(
 ALTER TABLE public.quality_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quality_scores ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies for quality_rules
+-- Create function to update updated_at column
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers for updated_at (with DROP IF EXISTS)
+DROP TRIGGER IF EXISTS set_quality_rules_timestamp ON public.quality_rules;
+CREATE TRIGGER set_quality_rules_timestamp
+    BEFORE UPDATE ON public.quality_rules
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS set_quality_scores_timestamp ON public.quality_scores;
+CREATE TRIGGER set_quality_scores_timestamp
+    BEFORE UPDATE ON public.quality_scores
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Policies for quality rules
+DROP POLICY IF EXISTS "Users can view quality rules" ON public.quality_rules;
 CREATE POLICY "Users can view quality rules" ON public.quality_rules
     FOR SELECT TO authenticated
     USING (EXISTS (
@@ -39,6 +66,7 @@ CREATE POLICY "Users can view quality rules" ON public.quality_rules
         AND (d.created_by = auth.uid() OR d.is_public = true)
     ));
 
+DROP POLICY IF EXISTS "Users can manage their own quality rules" ON public.quality_rules;
 CREATE POLICY "Users can manage their own quality rules" ON public.quality_rules
     FOR ALL TO authenticated
     USING (EXISTS (
@@ -52,7 +80,8 @@ CREATE POLICY "Users can manage their own quality rules" ON public.quality_rules
         AND d.created_by = auth.uid()
     ));
 
--- Create RLS policies for quality_scores
+-- Policies for quality scores
+DROP POLICY IF EXISTS "Users can view quality scores" ON public.quality_scores;
 CREATE POLICY "Users can view quality scores" ON public.quality_scores
     FOR SELECT TO authenticated
     USING (EXISTS (
@@ -61,28 +90,3 @@ CREATE POLICY "Users can view quality scores" ON public.quality_scores
         WHERE e.id = entry_id
         AND (d.created_by = auth.uid() OR d.is_public = true)
     ));
-
--- Create updated_at trigger function if it doesn't exist
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_updated_at_column') THEN
-        CREATE FUNCTION update_updated_at_column()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            NEW.updated_at = now();
-            RETURN NEW;
-        END;
-        $$ language 'plpgsql';
-    END IF;
-END $$;
-
--- Create triggers for updated_at
-CREATE TRIGGER set_quality_rules_timestamp
-    BEFORE UPDATE ON public.quality_rules
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER set_quality_scores_timestamp
-    BEFORE UPDATE ON public.quality_scores
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();

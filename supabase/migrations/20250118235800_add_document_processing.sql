@@ -1,8 +1,14 @@
+-- Drop table if exists
+DROP TABLE IF EXISTS document_processing_results;
+
+-- Drop enum for processing status if it exists
+DROP TYPE IF EXISTS processing_status;
+
 -- Create enum for processing status
 CREATE TYPE processing_status AS ENUM ('completed', 'failed', 'partial');
 
 -- Create table for document processing results
-CREATE TABLE document_processing_results (
+CREATE TABLE IF NOT EXISTS document_processing_results (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     document_id TEXT NOT NULL,
     extracted_terms JSONB NOT NULL,
@@ -14,13 +20,14 @@ CREATE TABLE document_processing_results (
 );
 
 -- Add indexes for better query performance
-CREATE INDEX idx_document_processing_status ON document_processing_results(status);
-CREATE INDEX idx_document_processing_created_at ON document_processing_results(created_at);
+CREATE INDEX IF NOT EXISTS idx_document_processing_status ON document_processing_results(status);
+CREATE INDEX IF NOT EXISTS idx_document_processing_created_at ON document_processing_results(created_at);
 
 -- Add RLS policies
 ALTER TABLE document_processing_results ENABLE ROW LEVEL SECURITY;
 
 -- Allow read access to authenticated users
+DROP POLICY IF EXISTS "Allow read access for authenticated users" ON document_processing_results;
 CREATE POLICY "Allow read access for authenticated users"
     ON document_processing_results
     FOR SELECT
@@ -28,6 +35,7 @@ CREATE POLICY "Allow read access for authenticated users"
     USING (true);
 
 -- Allow insert access to authenticated users
+DROP POLICY IF EXISTS "Allow insert access for authenticated users" ON document_processing_results;
 CREATE POLICY "Allow insert access for authenticated users"
     ON document_processing_results
     FOR INSERT
@@ -44,6 +52,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to automatically update updated_at timestamp
+DROP TRIGGER IF EXISTS update_document_processing_updated_at ON document_processing_results;
 CREATE TRIGGER update_document_processing_updated_at
     BEFORE UPDATE ON document_processing_results
     FOR EACH ROW

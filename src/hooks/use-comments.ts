@@ -1,184 +1,252 @@
-import { useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useToast } from './use-toast';
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/features/auth/auth-context'
+import { User } from '@supabase/supabase-js'
 
-interface Comment {
-  id: string;
-  entry_id: string;
-  author_id: string;
-  text: string;
-  created_at: string;
-  updated_at: string;
-  author: {
-    email: string;
-  };
+export type Comment = {
+  id: string
+  commentable_id: string
+  commentable_type: string
+  field_name?: string
+  author_id: string
+  text: string
+  created_at: string
+  updated_at: string
+  author?: {
+    id: string
+    email: string
+    full_name?: string
+  }
 }
 
-interface UseCommentsProps {
-  entryId: string;
+type UseCommentsProps = {
+  commentableId: string
+  commentableType: 'dictionary_entries' | 'quality_rules'
+  fieldName?: string
 }
 
-export function useComments({ entryId }: UseCommentsProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+export function useComments({ commentableId, commentableType, fieldName }: UseCommentsProps) {
+  const [comments, setComments] = useState<Comment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const { toast } = useToast()
+  const { session } = useAuth()
+  const user = session?.user as User | null
 
   const fetchComments = useCallback(async () => {
     try {
-      // Early return if entryId is not a valid UUID
-      if (!entryId || entryId.trim() === '') {
-        setComments([]);
-        setIsLoading(false);
-        return;
-      }
+      setIsLoading(true)
+      setError(null)
 
-      setIsLoading(true);
-      
-      // First, fetch comments
-      const { data: commentsData, error: commentsError } = await supabase
+      let query = supabase
         .from('comments')
-        .select('*')
-        .eq('entry_id', entryId)
-        .order('created_at', { ascending: false });
+        .select(`
+          *,
+          author:author_id (
+            id,
+            email,
+            raw_user_meta_data->full_name
+          )
+        `)
+        .eq('commentable_id', commentableId)
+        .eq('commentable_type', commentableType)
+        .order('created_at', { ascending: true })
 
-      if (commentsError) throw commentsError;
-
-      // If no comments, set empty array and return
-      if (!commentsData || commentsData.length === 0) {
-        setComments([]);
-        setIsLoading(false);
-        return;
+      if (fieldName) {
+        query = query.eq('field_name', fieldName)
       }
 
-      // Then, fetch author emails
-      const authorIds = commentsData.map(comment => comment.author_id).filter(Boolean);
-      const { data: authorsData, error: authorsError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .in('id', authorIds);
+      const { data, error } = await query
 
-      if (authorsError) throw authorsError;
+      if (error) throw error
 
-      // Combine comments with author emails
-      const enrichedComments: Comment[] = commentsData.map(comment => ({
+      setComments(data.map(comment => ({
         ...comment,
-        author: {
-          email: authorsData.find(author => author.id === comment.author_id)?.email || 'Unknown'
-        }
-      }));
-
-      setComments(enrichedComments);
-    } catch (error) {
-      console.error('Error fetching comments:', error);
+        author: comment.author ? {
+          id: comment.author.id,
+          email: comment.author.email,
+          full_name: comment.author.raw_user_meta_data?.full_name
+        } : undefined
+      })))
+    } catch (err) {
+      console.error('Error fetching comments:', err)
+      setError(err instanceof Error ? err : new Error('Failed to fetch comments'))
       toast({
         title: 'Error',
-        description: 'Failed to load comments',
-        variant: 'destructive',
-      });
-      setComments([]);
+        description: 'Failed to load comments. Please try again.',
+        variant: 'destructive'
+      })
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, [entryId, toast]);
+  }, [commentableId, commentableType, fieldName, toast])
 
   const addComment = useCallback(async (text: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { error } = await supabase
-        .from('comments')
-        .insert([
-          {
-            entry_id: entryId,
-            author_id: user.id,
-            text,
-          },
-        ]);
-
-      if (error) throw error;
-
-      // Refresh comments
-      fetchComments();
-
-      toast({
-        title: 'Success',
-        description: 'Comment added successfully',
-      });
-    } catch (error) {
-      console.error('Error adding comment:', error);
+    if (!user) {
       toast({
         title: 'Error',
-        description: 'Failed to add comment',
-        variant: 'destructive',
-      });
+        description: 'You must be logged in to add comments.',
+        variant: 'destructive'
+      })
+      return
     }
-  }, [entryId, fetchComments, toast]);
+
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({
+          commentable_id: commentableId,
+          commentable_type: commentableType,
+          field_name: fieldName,
+          author_id: user.id,
+          text
+        })
+        .select(`
+          *,
+          author:author_id (
+            id,
+            email,
+            raw_user_meta_data->full_name
+          )
+        `)
+        .single()
+
+      if (error) throw error
+
+      const newComment: Comment = {
+        ...data,
+        author: data.author ? {
+          id: data.author.id,
+          email: data.author.email,
+          full_name: data.author.raw_user_meta_data?.full_name
+        } : undefined
+      }
+
+      setComments(prev => [...prev, newComment])
+      toast({
+        title: 'Success',
+        description: 'Comment added successfully.'
+      })
+    } catch (err) {
+      console.error('Error adding comment:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to add comment. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }, [commentableId, commentableType, fieldName, user, toast])
+
+  const updateComment = useCallback(async (commentId: string, text: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to update comments.',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .update({ text })
+        .eq('id', commentId)
+        .eq('author_id', user.id) // Ensure user can only update their own comments
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setComments(prev =>
+        prev.map(comment =>
+          comment.id === commentId ? { ...comment, text, updated_at: data.updated_at } : comment
+        )
+      )
+      toast({
+        title: 'Success',
+        description: 'Comment updated successfully.'
+      })
+    } catch (err) {
+      console.error('Error updating comment:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to update comment. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }, [user, toast])
 
   const deleteComment = useCallback(async (commentId: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to delete comments.',
+        variant: 'destructive'
+      })
+      return
+    }
+
     try {
       const { error } = await supabase
         .from('comments')
         .delete()
-        .eq('id', commentId);
+        .eq('id', commentId)
+        .eq('author_id', user.id) // Ensure user can only delete their own comments
 
-      if (error) throw error;
+      if (error) throw error
 
-      // Update local state
-      setComments(comments => comments.filter(comment => comment.id !== commentId));
-
+      setComments(prev => prev.filter(comment => comment.id !== commentId))
       toast({
         title: 'Success',
-        description: 'Comment deleted successfully',
-      });
-    } catch (error) {
-      console.error('Error deleting comment:', error);
+        description: 'Comment deleted successfully.'
+      })
+    } catch (err) {
+      console.error('Error deleting comment:', err)
       toast({
         title: 'Error',
-        description: 'Failed to delete comment',
-        variant: 'destructive',
-      });
+        description: 'Failed to delete comment. Please try again.',
+        variant: 'destructive'
+      })
     }
-  }, [toast]);
+  }, [user, toast])
 
-  const updateComment = useCallback(async (commentId: string, text: string) => {
-    try {
-      const { error } = await supabase
-        .from('comments')
-        .update({ text })
-        .eq('id', commentId);
+  useEffect(() => {
+    fetchComments()
+  }, [fetchComments])
 
-      if (error) throw error;
+  // Set up real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-${commentableId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comments',
+          filter: `commentable_id=eq.${commentableId}`
+        },
+        (payload) => {
+          // Refresh comments when changes occur
+          fetchComments()
+        }
+      )
+      .subscribe()
 
-      // Update local state
-      setComments(comments =>
-        comments.map(comment =>
-          comment.id === commentId
-            ? { ...comment, text, updated_at: new Date().toISOString() }
-            : comment
-        )
-      );
-
-      toast({
-        title: 'Success',
-        description: 'Comment updated successfully',
-      });
-    } catch (error) {
-      console.error('Error updating comment:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update comment',
-        variant: 'destructive',
-      });
+    return () => {
+      supabase.removeChannel(channel)
     }
-  }, [toast]);
+  }, [commentableId, fetchComments])
 
   return {
     comments,
     isLoading,
-    fetchComments,
+    error,
     addComment,
-    deleteComment,
     updateComment,
-  };
+    deleteComment,
+    refresh: fetchComments
+  }
 }

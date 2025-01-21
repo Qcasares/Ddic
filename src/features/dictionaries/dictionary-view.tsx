@@ -1,96 +1,148 @@
-import { useState, useCallback } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DataLineage } from '@/components/data-lineage';
-import { ApprovalQueue } from '@/components/approval-queue';
-import { BusinessGlossary } from '@/components/business-glossary';
-import { VersionHistory } from '@/components/version-history';
-import CommentsSection from '@/components/comments-section';
-import { FieldManagement } from '@/components/field-management';
+import { useEffect, useState } from 'react'
+import { useParams } from '@/lib/router'
+import { useDictionaries } from '@/hooks/use-dictionaries'
+import { useDictionaryEntries } from '@/hooks/use-dictionary-entries'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CreateEntryDialog } from '@/components/create-entry-dialog'
+import { EditEntryDialog } from '@/components/edit-entry-dialog'
+import { CommentsSection } from '@/components/comments-section'
+import { Loader2, Plus } from 'lucide-react'
 
-interface DictionaryViewProps {
-  dictionaryId: string;
+export interface DictionaryEntry {
+  id: string
+  term: string
+  definition: string
+  dictionary_id: string
+  created_at: string
+  updated_at: string
 }
 
-export function DictionaryView({ dictionaryId }: DictionaryViewProps) {
-  const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
+export interface Dictionary {
+  id: string
+  name: string
+  description: string
+  created_at: string
+  updated_at: string
+}
 
-  const handleViewHistory = useCallback((entryId: string) => {
-    setSelectedEntry(entryId);
-  }, []);
+export function DictionaryView() {
+  const { dictionaryId = '' } = useParams<{ dictionaryId: string }>()
+  const { data: dictionaries, isLoading: isDictionaryLoading } = useDictionaries()
+  const { data: entriesData, isLoading: isEntriesLoading } = useDictionaryEntries(dictionaryId)
+  const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+
+  const dictionary = dictionaries?.find((d: Dictionary) => d.id === dictionaryId)
+  const entries = entriesData?.entries || []
+
+  useEffect(() => {
+    // Reset selected entry when dictionary changes
+    setSelectedEntry(null)
+  }, [dictionaryId])
+
+  if (isDictionaryLoading || isEntriesLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!dictionary) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p>Dictionary not found</p>
+      </div>
+    )
+  }
+
+  const selectedEntryData = entries.find((entry: DictionaryEntry) => entry.id === selectedEntry)
 
   return (
-    <Tabs defaultValue="fields" className="space-y-6">
-      <TabsList className="bg-muted/50 p-1 gap-1">
-        <TabsTrigger 
-          value="fields"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Fields
-        </TabsTrigger>
-        <TabsTrigger 
-          value="lineage"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Data Lineage
-        </TabsTrigger>
-        <TabsTrigger 
-          value="approvals"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Approvals
-        </TabsTrigger>
-        <TabsTrigger 
-          value="glossary"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Business Glossary
-        </TabsTrigger>
-        <TabsTrigger 
-          value="history"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          History
-        </TabsTrigger>
-        <TabsTrigger 
-          value="comments"
-          className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-        >
-          Comments
-        </TabsTrigger>
-      </TabsList>
+    <div className="container mx-auto p-4 space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">{dictionary.name}</h1>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Entry
+        </Button>
+      </div>
 
-      <TabsContent value="fields">
-        <FieldManagement 
-          dictionaryId={dictionaryId}
-          onViewHistory={handleViewHistory}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Entries List */}
+        <div className="col-span-4 space-y-2">
+          {entries.map((entry: DictionaryEntry) => (
+            <Card
+              key={entry.id}
+              className={`p-4 cursor-pointer hover:bg-accent ${
+                selectedEntry === entry.id ? 'border-primary' : ''
+              }`}
+              onClick={() => setSelectedEntry(entry.id)}
+            >
+              <h3 className="font-semibold">{entry.term}</h3>
+              <p className="text-sm text-muted-foreground truncate">
+                {entry.definition}
+              </p>
+            </Card>
+          ))}
+        </div>
+
+        {/* Entry Details */}
+        <div className="col-span-8">
+          {selectedEntryData ? (
+            <Card className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">{selectedEntryData.term}</h2>
+                  <p className="text-muted-foreground">{selectedEntryData.definition}</p>
+                </div>
+                <Button onClick={() => setIsEditDialogOpen(true)}>
+                  Edit Entry
+                </Button>
+              </div>
+
+              <Tabs defaultValue="comments">
+                <TabsList>
+                  <TabsTrigger value="comments">Comments</TabsTrigger>
+                  <TabsTrigger value="history">History</TabsTrigger>
+                </TabsList>
+                <TabsContent value="comments" className="mt-4">
+                  <CommentsSection
+                    commentableId={selectedEntryData.id}
+                    commentableType="dictionary_entries"
+                  />
+                </TabsContent>
+                <TabsContent value="history">
+                  <div className="text-muted-foreground text-center p-4">
+                    Entry history will be available soon
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </Card>
+          ) : (
+            <Card className="p-6 flex justify-center items-center h-full text-muted-foreground">
+              Select an entry to view details
+            </Card>
+          )}
+        </div>
+      </div>
+
+      <CreateEntryDialog
+        dictionaryId={dictionaryId}
+        show={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+      />
+
+      {selectedEntryData && (
+        <EditEntryDialog
+          entry={selectedEntryData}
+          show={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
         />
-      </TabsContent>
-
-      <TabsContent value="lineage">
-        <DataLineage dictionaryId={dictionaryId} />
-      </TabsContent>
-
-      <TabsContent value="approvals">
-        <ApprovalQueue 
-          dictionaryId={dictionaryId}
-          onEntrySelect={setSelectedEntry}
-        />
-      </TabsContent>
-
-      <TabsContent value="glossary">
-        <BusinessGlossary 
-          dictionaryId={dictionaryId}
-          onTermSelect={setSelectedEntry}
-        />
-      </TabsContent>
-
-      <TabsContent value="history">
-        <VersionHistory dictionaryId={dictionaryId} />
-      </TabsContent>
-
-      <TabsContent value="comments">
-        <CommentsSection entryId={selectedEntry || ''} />
-      </TabsContent>
-    </Tabs>
-  );
+      )}
+    </div>
+  )
 }
