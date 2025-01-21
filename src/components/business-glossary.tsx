@@ -37,6 +37,52 @@ interface BusinessTerm {
   },
 }
 
+interface TermCardProps {
+  term: BusinessTerm;
+  onClick: () => void;
+}
+
+const TermCard = ({ term, onClick }: TermCardProps) => {
+  return (
+    <Card
+      className="p-4 cursor-pointer hover:bg-accent transition-colors"
+      onClick={onClick}
+    >
+      <div className="space-y-2">
+        <div className="flex items-start justify-between">
+          <h4 className="font-medium">{term.name}</h4>
+          {getStatusBadge(term.status)}
+        </div>
+        
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {term.definition}
+        </p>
+        
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Tag className="h-4 w-4" />
+            {term.domain}
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            {formatDistanceToNow(new Date(term.created_at), { addSuffix: true })}
+          </div>
+        </div>
+
+        {term.synonyms && term.synonyms.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {term.synonyms.map((synonym, i) => (
+              <Badge key={i} variant="secondary">
+                {synonym}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
+
 export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossaryProps) {
   const [terms, setTerms] = useState<BusinessTerm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,11 +90,12 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { toast } = useToast();
 
-  const fetchTerms = useCallback(async () => {
+  const fetchTerms = useCallback(async (signal?: AbortSignal) => {
       try {
         setIsLoading(true);
 
         await withErrorHandling(async () => {
+          if (signal?.aborted) return;
           let query = supabase
             .from('business_terms')
             .select(`
@@ -93,8 +140,18 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
       }
     });
 
-    fetchTerms();
-  }, [dictionaryId, debouncedSearch, toast, fetchTerms]);
+    const abortController = new AbortController();
+    
+    fetchTerms(abortController.signal).catch((error) => {
+      toast({
+        title: 'Failed to load terms',
+        description: error.message,
+        variant: 'destructive',
+      });
+    });
+
+    return () => abortController.abort();
+  }, [dictionaryId, debouncedSearch, toast]);
 
   const getStatusBadge = useCallback((status: string = 'draft'): JSX.Element => {
     switch (status) {
@@ -170,11 +227,11 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
               </div>
             ) : (
               terms.map((term) => (
-                <Card
+                <TermCard 
                   key={term.id}
-                  className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                  term={term}
                   onClick={() => onTermSelect?.(term.id)}
-                >
+                />
                   <div className="space-y-2">
                     <div className="flex items-start justify-between">
                       <h4 className="font-medium">{term.name}</h4>
