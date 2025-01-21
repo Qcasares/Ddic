@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useCache } from './use-cache';
 import { useRealtimeSync, SyncStatus } from './use-realtime-sync';
@@ -45,6 +45,14 @@ export function useDictionaryEntries({
   filters = [],
 }: UseDictionaryEntriesOptions) {
   const fetcher = useCallback(async () => {
+    // Prevent query if dictionaryId is empty
+    if (!dictionaryId) {
+      return {
+        entries: [],
+        total: 0
+      };
+    }
+
     let query = supabase
       .from('dictionary_entries')
       .select('*', { count: 'exact' })

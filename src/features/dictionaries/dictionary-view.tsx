@@ -23,7 +23,17 @@ interface DictionaryEntry {
 }
 
 export function DictionaryView() {
-  const { dictionaryId = '' } = useParams<{ dictionaryId: string }>()
+  const { dictionaryId } = useParams<{ dictionaryId: string }>()
+  
+  // Return early if no dictionaryId is provided
+  if (!dictionaryId) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p>No dictionary selected</p>
+      </div>
+    )
+  }
+
   const { data: dictionaries = [], isLoading: isDictionaryLoading } = useDictionaries()
   const { data: entriesData, isLoading: isEntriesLoading } = useDictionaryEntries({
     dictionaryId,
