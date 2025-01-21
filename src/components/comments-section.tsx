@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { formatDistanceToNow } from 'date-fns'
 import { Loader2, Send, Pencil, Trash2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface CommentsSectionProps {
   entryId: string
@@ -29,7 +30,38 @@ export function CommentsSection({ entryId, fieldName }: CommentsSectionProps) {
     deleteComment
   } = useComments({ entryId, fieldName })
 
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!newComment.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Comment cannot be empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await addComment(newComment.trim());
+      setNewComment('');
+      toast({
+        title: 'Success',
+        description: 'Comment added successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to add comment',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [addComment, newComment, toast]);
     e.preventDefault()
     if (!newComment.trim()) return
 
@@ -151,9 +183,13 @@ export function CommentsSection({ entryId, fieldName }: CommentsSectionProps) {
             className="min-h-[100px]"
           />
           <div className="flex justify-end mt-2">
-            <Button type="submit" disabled={!newComment.trim()}>
-              <Send className="h-4 w-4 mr-2" />
-              Send
+            <Button type="submit" disabled={!newComment.trim() || isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {isSubmitting ? 'Sending...' : 'Send'}
             </Button>
           </div>
         </form>
