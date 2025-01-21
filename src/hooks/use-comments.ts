@@ -3,16 +3,9 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/features/auth/auth-context'
 import { User } from '@supabase/supabase-js'
+import { Tables } from '@/types/supabase'
 
-export type Comment = {
-  id: string
-  commentable_id: string
-  commentable_type: string
-  field_name?: string
-  author_id: string
-  text: string
-  created_at: string
-  updated_at: string
+export type Comment = Tables<'comments'> & {
   author?: {
     id: string
     email: string
@@ -43,14 +36,13 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
         .from('comments')
         .select(`
           *,
-          author:author_id (
+          users:author_id (
             id,
             email,
             raw_user_meta_data->full_name
           )
         `)
-        .eq('commentable_id', commentableId)
-        .eq('commentable_type', commentableType)
+        .eq('entry_id', commentableId)
         .order('created_at', { ascending: true })
 
       if (fieldName) {
@@ -63,10 +55,10 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
 
       setComments(data.map(comment => ({
         ...comment,
-        author: comment.author ? {
-          id: comment.author.id,
-          email: comment.author.email,
-          full_name: comment.author.raw_user_meta_data?.full_name
+        author: comment.users ? {
+          id: comment.users.id,
+          email: comment.users.email,
+          full_name: comment.users.raw_user_meta_data?.full_name
         } : undefined
       })))
     } catch (err) {
@@ -80,7 +72,7 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
     } finally {
       setIsLoading(false)
     }
-  }, [commentableId, commentableType, fieldName, toast])
+  }, [commentableId, fieldName, toast])
 
   const addComment = useCallback(async (text: string) => {
     if (!user) {
@@ -96,15 +88,13 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
       const { data, error } = await supabase
         .from('comments')
         .insert({
-          commentable_id: commentableId,
-          commentable_type: commentableType,
-          field_name: fieldName,
+          entry_id: commentableId,
           author_id: user.id,
           text
         })
         .select(`
           *,
-          author:author_id (
+          users:author_id (
             id,
             email,
             raw_user_meta_data->full_name
@@ -116,10 +106,10 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
 
       const newComment: Comment = {
         ...data,
-        author: data.author ? {
-          id: data.author.id,
-          email: data.author.email,
-          full_name: data.author.raw_user_meta_data?.full_name
+        author: data.users ? {
+          id: data.users.id,
+          email: data.users.email,
+          full_name: data.users.raw_user_meta_data?.full_name
         } : undefined
       }
 
@@ -136,7 +126,7 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
         variant: 'destructive'
       })
     }
-  }, [commentableId, commentableType, fieldName, user, toast])
+  }, [commentableId, user, toast])
 
   const updateComment = useCallback(async (commentId: string, text: string) => {
     if (!user) {
@@ -226,7 +216,7 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
           event: '*',
           schema: 'public',
           table: 'comments',
-          filter: `commentable_id=eq.${commentableId}`
+          filter: `entry_id=eq.${commentableId}`
         },
         () => {
           // Refresh comments when changes occur
