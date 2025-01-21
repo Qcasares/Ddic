@@ -88,18 +88,37 @@ export function EditEntryDialog({ entry, onClose, onSuccess }: EditEntryDialogPr
         }), {}),
       });
 
-      const { error } = await supabase
+      // Ensure we have a valid Supabase client
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
+      // Convert metadata to JSON string for Supabase storage
+      const supabaseMetadata = validatedData.metadata ? 
+        JSON.stringify(validatedData.metadata) : 
+        null;
+
+      const { data, error } = await supabase
         .from('dictionary_entries')
         .update({
           field_name: validatedData.field_name,
           data_type: validatedData.data_type,
           description: validatedData.description,
           sample_values: validatedData.sample_values,
-          metadata: validatedData.metadata,
+          metadata: supabaseMetadata,  // Use stringified metadata
+          updated_at: new Date().toISOString()
         })
-        .eq('id', entry.id);
+        .eq('id', entry.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw new Error(error.message || 'Failed to update entry');
+      }
+
+      if (!data) {
+        throw new Error('No data returned from update operation');
+      }
 
       toast({
         title: 'Success',
