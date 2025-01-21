@@ -38,6 +38,15 @@ export function RelationsDialog({ entry, onClose, onSuccess }: RelationsDialogPr
     data_type: string;
   }
   
+  interface Field {
+    id: string;
+    field_name: string;
+    data_type: string;
+    dictionary_id: string;
+    description?: string | null;
+    workflow_status?: string;
+  }
+  
   const [fields, setFields] = useState<Field[]>([]);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

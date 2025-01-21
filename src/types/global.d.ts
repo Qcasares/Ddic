@@ -21,6 +21,29 @@ declare module 'openai' {
     presence_penalty?: number;
     frequency_penalty?: number;
     user?: string;
+    suffix?: string | null;
+    best_of?: number;
+    logit_bias?: Record<string, number>;
+    logprobs?: number | null;
+    echo?: boolean;
+  }
+
+  export interface Usage {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  }
+
+  export interface Choice {
+    text: string;
+    index: number;
+    logprobs: {
+      tokens: string[];
+      token_logprobs: number[];
+      top_logprobs: Record<string, number>[];
+      text_offset: number[];
+    } | null;
+    finish_reason: 'stop' | 'length' | 'content_filter' | null;
   }
 
   export interface CompletionResponse {
