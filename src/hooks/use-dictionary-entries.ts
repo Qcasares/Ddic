@@ -93,16 +93,52 @@ export function useDictionaryEntries({
     ttl: 30000, // 30 seconds
   });
 
+  // Use ref to track last refetch time
+  const lastRefetchTime = useRef(Date.now());
+  const refetchTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Debounced refetch function
+  const debouncedRefetch = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastRefetch = now - lastRefetchTime.current;
+    
+    // Clear any pending refetch
+    if (refetchTimeoutRef.current) {
+      clearTimeout(refetchTimeoutRef.current);
+    }
+
+    // Only refetch if enough time has passed (1 second)
+    if (timeSinceLastRefetch > 1000) {
+      lastRefetchTime.current = now;
+      refetch();
+    } else {
+      // Schedule a refetch for later
+      refetchTimeoutRef.current = setTimeout(() => {
+        lastRefetchTime.current = Date.now();
+        refetch();
+      }, 1000 - timeSinceLastRefetch);
+    }
+  }, [refetch]);
+
   // Subscribe to real-time updates
   const { data: realtimeData, syncStatus, isOnline } = useRealtimeSync(
     `dictionary-entries-${dictionaryId}`,
     'dictionary_entries',
     initialData || { entries: [], total: 0 },
     {
-      onDataUpdate: refetch,
+      onDataUpdate: debouncedRefetch,
       priority: 'high'
     }
   );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     data: realtimeData as DictionaryEntriesData,
