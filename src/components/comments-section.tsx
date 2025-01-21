@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useComments, type Comment } from '@/hooks/use-comments'
 import { useAuth } from '@/features/auth/auth-context'
 import { Button } from '@/components/ui/button'
