@@ -28,21 +28,23 @@ import { validateOrThrow, entrySchema } from '@/lib/validation';
 const DATA_TYPES = [
   'string',
   'number',
-  'boolean',
+  'boolean', 
   'date',
   'datetime',
   'array',
   'object',
   'null',
+  'binary',
+  'decimal'
 ] as const;
 
 interface EntryBase {
   id: string;
   field_name: string;
   data_type: typeof DATA_TYPES[number];
-  description?: string;
-  sample_values?: unknown[];
-  metadata?: Record<string, { value: unknown; type: string }>;
+  description?: string | null;
+  sample_values?: unknown[] | null;
+  metadata?: Record<string, { value: unknown; type: string }> | null;
 }
 
 interface EditEntryDialogProps {
