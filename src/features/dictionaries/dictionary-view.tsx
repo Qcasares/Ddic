@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from '@/lib/router'
+import { useParams } from 'react-router-dom'
 import { useDictionaries } from '@/hooks/use-dictionaries'
 import { useDictionaryEntries } from '@/hooks/use-dictionary-entries'
 import { Button } from '@/components/ui/button'
@@ -9,34 +9,25 @@ import { CreateEntryDialog } from '@/components/create-entry-dialog'
 import { EditEntryDialog } from '@/components/edit-entry-dialog'
 import { CommentsSection } from '@/components/comments-section'
 import { Loader2, Plus } from 'lucide-react'
+import type { Database } from '@/types/supabase'
 
-export interface DictionaryEntry {
-  id: string
-  term: string
-  definition: string
-  dictionary_id: string
-  created_at: string
-  updated_at: string
-}
+type Dictionary = Database['public']['Tables']['dictionaries']['Row']
+type DictionaryEntry = Database['public']['Tables']['dictionary_entries']['Row']
 
-export interface Dictionary {
-  id: string
-  name: string
-  description: string
-  created_at: string
-  updated_at: string
+interface DictionaryEntriesData {
+  entries: DictionaryEntry[]
 }
 
 export function DictionaryView() {
   const { dictionaryId = '' } = useParams<{ dictionaryId: string }>()
-  const { data: dictionaries, isLoading: isDictionaryLoading } = useDictionaries()
+  const { data: dictionaries = [], isLoading: isDictionaryLoading } = useDictionaries()
   const { data: entriesData, isLoading: isEntriesLoading } = useDictionaryEntries(dictionaryId)
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
-  const dictionary = dictionaries?.find((d: Dictionary) => d.id === dictionaryId)
-  const entries = entriesData?.entries || []
+  const dictionary = dictionaries.find((d) => d.id === dictionaryId)
+  const entries = (entriesData as DictionaryEntriesData)?.entries || []
 
   useEffect(() => {
     // Reset selected entry when dictionary changes
@@ -59,7 +50,7 @@ export function DictionaryView() {
     )
   }
 
-  const selectedEntryData = entries.find((entry: DictionaryEntry) => entry.id === selectedEntry)
+  const selectedEntryData = entries.find((entry) => entry.id === selectedEntry)
 
   return (
     <div className="container mx-auto p-4 space-y-4">
@@ -74,7 +65,7 @@ export function DictionaryView() {
       <div className="grid grid-cols-12 gap-4">
         {/* Entries List */}
         <div className="col-span-4 space-y-2">
-          {entries.map((entry: DictionaryEntry) => (
+          {entries.map((entry) => (
             <Card
               key={entry.id}
               className={`p-4 cursor-pointer hover:bg-accent ${
@@ -132,15 +123,15 @@ export function DictionaryView() {
 
       <CreateEntryDialog
         dictionaryId={dictionaryId}
-        show={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
       />
 
       {selectedEntryData && (
         <EditEntryDialog
           entry={selectedEntryData}
-          show={isEditDialogOpen}
-          onClose={() => setIsEditDialogOpen(false)}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
         />
       )}
     </div>
