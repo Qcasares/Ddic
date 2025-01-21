@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface CacheItem<T> {
   data: T;
@@ -21,9 +21,15 @@ export function useCache<T>(
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [version, setVersion] = useState(0);
+
+  // Store fetcher in a ref to prevent unnecessary re-renders
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
 
   const invalidateCache = useCallback(() => {
     cache.delete(key);
+    setVersion(v => v + 1);
   }, [key]);
 
   const fetchData = useCallback(async (force = false) => {
@@ -39,7 +45,7 @@ export function useCache<T>(
     setIsLoading(true);
 
     try {
-      const freshData = await fetcher();
+      const freshData = await fetcherRef.current();
       cache.set(key, { data: freshData, timestamp: now });
       setData(freshData);
       setError(null);
@@ -52,40 +58,37 @@ export function useCache<T>(
     } finally {
       setIsLoading(false);
     }
-  }, [fetcher, key, ttl]);
+  }, [key, ttl]);
 
   useEffect(() => {
     let isMounted = true;
+    const cached = cache.get(key);
+    const now = Date.now();
+
+    if (cached && now - cached.timestamp < ttl) {
+      setData(cached.data);
+      setIsLoading(false);
+      return;
+    }
 
     const fetchWithMountCheck = async () => {
-      const cached = cache.get(key);
-      const now = Date.now();
-
-      if (cached && now - cached.timestamp < ttl) {
-        if (isMounted) {
-          setData(cached.data);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (isMounted) {
-        setIsLoading(true);
-      }
+      if (!isMounted) return;
+      
+      setIsLoading(true);
 
       try {
-        const freshData = await fetcher();
-        if (isMounted) {
-          cache.set(key, { data: freshData, timestamp: now });
-          setData(freshData);
-          setError(null);
-        }
+        const freshData = await fetcherRef.current();
+        if (!isMounted) return;
+
+        cache.set(key, { data: freshData, timestamp: now });
+        setData(freshData);
+        setError(null);
       } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to fetch data'));
-          if (!cached) {
-            setData(null);
-          }
+        if (!isMounted) return;
+
+        setError(err instanceof Error ? err : new Error('Failed to fetch data'));
+        if (!cached) {
+          setData(null);
         }
       } finally {
         if (isMounted) {
@@ -99,7 +102,7 @@ export function useCache<T>(
     return () => {
       isMounted = false;
     };
-  }, [fetcher, key, ttl]);
+  }, [key, ttl, version]); // Remove fetcher from dependencies, use version for manual updates
 
   return {
     data,

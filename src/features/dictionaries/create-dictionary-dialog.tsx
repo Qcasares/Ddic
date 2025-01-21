@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { AppError } from '@/lib/error-handler';
+import { AppError } from '@/lib/utils/errors';
 import { z } from 'zod';
 
 const dictionarySchema = z.object({

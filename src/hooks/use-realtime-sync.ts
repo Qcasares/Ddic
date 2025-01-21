@@ -37,6 +37,9 @@ export function useRealtimeSync<T>(
 
   // Event handlers wrapped in useCallback
   const handleUpdate = useCallback(() => {
+    // Skip update if already syncing
+    if (syncStatus.isSyncing) return;
+
     setSyncStatus(prev => ({
       ...prev,
       isSyncing: true,
@@ -47,11 +50,13 @@ export function useRealtimeSync<T>(
       window.clearTimeout(updateTimeoutRef.current);
     }
 
-    const updateDelay = options.priority === 'high' ? 0 : 
+    const updateDelay = options.priority === 'high' ? 0 :
                        options.priority === 'low' ? 500 : 100;
 
     updateTimeoutRef.current = window.setTimeout(() => {
-      if (options.onDataUpdate) {
+      // Only trigger onDataUpdate if the component is still mounted
+      // and we're not already processing another update
+      if (options.onDataUpdate && !syncStatus.isSyncing) {
         options.onDataUpdate();
       }
       setSyncStatus(prev => ({
@@ -60,7 +65,7 @@ export function useRealtimeSync<T>(
       }));
       updateTimeoutRef.current = null;
     }, updateDelay);
-  }, [options.onDataUpdate, options.priority]);
+  }, [options.onDataUpdate, options.priority, syncStatus.isSyncing]);
 
   const handleError = useCallback((error: Error) => {
     setSyncStatus(prev => ({
@@ -152,8 +157,11 @@ export function useRealtimeSync<T>(
 
   // Data update effect
   useEffect(() => {
-    dataCache.current = initialData;
-    setData(initialData);
+    // Only update if the data has actually changed
+    if (JSON.stringify(dataCache.current) !== JSON.stringify(initialData)) {
+      dataCache.current = initialData;
+      setData(initialData);
+    }
   }, [initialData]);
 
   return {

@@ -63,7 +63,7 @@ export class AppError extends Error {
     public readonly type: ErrorType = ErrorType.UNKNOWN,
     public readonly severity: ErrorSeverity = ErrorSeverity.ERROR,
     public readonly code?: string,
-    private readonly details?: unknown,
+    details?: unknown,
     public readonly retry?: () => Promise<unknown>
   ) {
     super(sanitizeErrorMessage(message));
