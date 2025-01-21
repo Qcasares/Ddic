@@ -27,12 +27,12 @@ interface QueueEntry {
 interface SupabaseEntry {
   id: string;
   field_name: string;
-  workflow_status: string;
-  created_at: string;
-  created_by: string;
-  user: {
+  workflow_status: string | null;
+  created_at: string | null;
+  created_by: string | null;
+  users: {
     email: string;
-  }[];
+  } | null;
 }
 
 export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProps) {
@@ -55,7 +55,7 @@ export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProp
               workflow_status,
               created_at,
               created_by,
-              user:created_by (
+              users!dictionary_entries_created_by_fkey (
                 email
               )
             `)
@@ -66,17 +66,21 @@ export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProp
           if (error) throw error;
           
           // Transform the data to match QueueEntry type
-          const transformedData = (data as SupabaseEntry[]).map(entry => ({
-            ...entry,
+          const transformedData = data.map(entry => ({
+            id: entry.id,
+            field_name: entry.field_name,
+            workflow_status: entry.workflow_status || 'review',
+            created_at: entry.created_at || new Date().toISOString(),
+            created_by: entry.created_by || '',
             user: {
-              email: entry.user[0]?.email || ''
+              email: entry.users?.email || ''
             }
           }));
           
           setEntries(transformedData);
         }, {
           maxRetries: 2,
-          retryDelay: 500
+          baseDelay: 500
         });
       } finally {
         setIsLoading(false);
@@ -131,7 +135,7 @@ export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProp
         });
       }, {
         maxRetries: 2,
-        retryDelay: 500
+        baseDelay: 500
       });
     } finally {
       setProcessingEntries(prev => {
@@ -170,7 +174,7 @@ export function ApprovalQueue({ dictionaryId, onEntrySelect }: ApprovalQueueProp
         });
       }, {
         maxRetries: 2,
-        retryDelay: 500
+        baseDelay: 500
       });
     } finally {
       setProcessingEntries(prev => {
