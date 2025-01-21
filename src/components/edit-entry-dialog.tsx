@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { cacheManager } from '@/lib/cache-manager';
 import { useToast } from '@/hooks/use-toast';
 import { MetadataEditor, type MetadataField } from './metadata-field';
 import { validateOrThrow, entrySchema } from '@/lib/validation';
