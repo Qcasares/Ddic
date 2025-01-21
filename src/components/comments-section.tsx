@@ -62,12 +62,6 @@ export function CommentsSection({ entryId, fieldName }: CommentsSectionProps) {
       setIsSubmitting(false);
     }
   }, [addComment, newComment, toast]);
-    e.preventDefault()
-    if (!newComment.trim()) return
-
-    await addComment(newComment.trim())
-    setNewComment('')
-  }
 
   const handleEdit = async (commentId: string) => {
     if (!editText.trim()) return
