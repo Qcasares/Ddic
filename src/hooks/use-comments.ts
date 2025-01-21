@@ -37,7 +37,7 @@ const isValidCommentWithAuthor = (comment: any): comment is CommentWithAuthor =>
          ))
 }
 
-export function useComments({ commentableId, commentableType, fieldName }: UseCommentsProps) {
+export function useComments({ commentableId, fieldName }: UseCommentsProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
