@@ -34,7 +34,7 @@ interface BusinessTerm {
   created_at: string;
   user: {
     email: string;
-  };
+  },
 }
 
 export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossaryProps) {
