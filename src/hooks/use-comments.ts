@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/features/auth/auth-context'
 import { User } from '@supabase/supabase-js'
 import { Tables } from '@/types/supabase'
+import { PostgrestError } from '@supabase/supabase-js'
 
 export type Comment = Tables<'comments'> & {
   author?: {
@@ -19,6 +20,23 @@ type UseCommentsProps = {
   fieldName?: string
 }
 
+type CommentWithAuthor = Tables<'comments'> & {
+  users?: {
+    id: string
+    email: string
+    raw_user_meta_data?: { full_name?: string }
+  } | null
+}
+
+const isValidCommentWithAuthor = (comment: any): comment is CommentWithAuthor => {
+  return comment && typeof comment === 'object' && 
+         (!comment.users || (
+           typeof comment.users === 'object' && 
+           typeof comment.users.id === 'string' && 
+           typeof comment.users.email === 'string'
+         ))
+}
+
 export function useComments({ commentableId, commentableType, fieldName }: UseCommentsProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -27,46 +45,44 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
   const { session } = useAuth()
   const user = session?.user as User | null
 
+  const processComment = (comment: CommentWithAuthor): Comment => ({
+    ...comment,
+    author: comment.users ? {
+      id: comment.users.id,
+      email: comment.users.email,
+      full_name: comment.users.raw_user_meta_data?.full_name
+    } : undefined
+  })
+
   const fetchComments = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
 
-      let query = supabase
+      const query = supabase
         .from('comments')
-        .select(`
-          *,
-          users:author_id (
-            id,
-            email,
-            raw_user_meta_data->full_name
-          )
-        `)
+        .select('*, users:author_id(*)')
         .eq('entry_id', commentableId)
         .order('created_at', { ascending: true })
 
-      if (fieldName) {
-        query = query.eq('field_name', fieldName)
-      }
-
-      const { data, error } = await query
+      const { data, error } = await (fieldName 
+        ? query.eq('field_name', fieldName) 
+        : query)
 
       if (error) throw error
 
-      setComments(data.map(comment => ({
-        ...comment,
-        author: comment.users ? {
-          id: comment.users.id,
-          email: comment.users.email,
-          full_name: comment.users.raw_user_meta_data?.full_name
-        } : undefined
-      })))
+      const processedComments = (data as any[])
+        .filter(isValidCommentWithAuthor)
+        .map(processComment)
+
+      setComments(processedComments)
     } catch (err) {
       console.error('Error fetching comments:', err)
-      setError(err instanceof Error ? err : new Error('Failed to fetch comments'))
+      const errorObj = err as PostgrestError
+      setError(errorObj instanceof Error ? errorObj : new Error('Failed to fetch comments'))
       toast({
         title: 'Error',
-        description: 'Failed to load comments. Please try again.',
+        description: errorObj.message || 'Failed to load comments. Please try again.',
         variant: 'destructive'
       })
     } finally {
@@ -92,27 +108,16 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
           author_id: user.id,
           text
         })
-        .select(`
-          *,
-          users:author_id (
-            id,
-            email,
-            raw_user_meta_data->full_name
-          )
-        `)
+        .select('*, users:author_id(*)')
         .single()
 
       if (error) throw error
 
-      const newComment: Comment = {
-        ...data,
-        author: data.users ? {
-          id: data.users.id,
-          email: data.users.email,
-          full_name: data.users.raw_user_meta_data?.full_name
-        } : undefined
+      if (!isValidCommentWithAuthor(data)) {
+        throw new Error('Invalid comment data')
       }
 
+      const newComment = processComment(data)
       setComments(prev => [...prev, newComment])
       toast({
         title: 'Success',
@@ -120,9 +125,10 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
       })
     } catch (err) {
       console.error('Error adding comment:', err)
+      const errorObj = err as PostgrestError
       toast({
         title: 'Error',
-        description: 'Failed to add comment. Please try again.',
+        description: errorObj.message || 'Failed to add comment. Please try again.',
         variant: 'destructive'
       })
     }
@@ -143,7 +149,7 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
         .from('comments')
         .update({ text })
         .eq('id', commentId)
-        .eq('author_id', user.id) // Ensure user can only update their own comments
+        .eq('author_id', user.id)
         .select()
         .single()
 
@@ -160,9 +166,10 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
       })
     } catch (err) {
       console.error('Error updating comment:', err)
+      const errorObj = err as PostgrestError
       toast({
         title: 'Error',
-        description: 'Failed to update comment. Please try again.',
+        description: errorObj.message || 'Failed to update comment. Please try again.',
         variant: 'destructive'
       })
     }
@@ -183,7 +190,7 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
         .from('comments')
         .delete()
         .eq('id', commentId)
-        .eq('author_id', user.id) // Ensure user can only delete their own comments
+        .eq('author_id', user.id)
 
       if (error) throw error
 
@@ -194,9 +201,10 @@ export function useComments({ commentableId, commentableType, fieldName }: UseCo
       })
     } catch (err) {
       console.error('Error deleting comment:', err)
+      const errorObj = err as PostgrestError
       toast({
         title: 'Error',
-        description: 'Failed to delete comment. Please try again.',
+        description: errorObj.message || 'Failed to delete comment. Please try again.',
         variant: 'destructive'
       })
     }

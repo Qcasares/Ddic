@@ -84,7 +84,7 @@ export function CommentsSection({ commentableId, commentableType, fieldName }: C
                         {comment.author?.full_name || comment.author?.email || 'Unknown User'}
                       </span>
                       <span className="text-sm text-muted-foreground ml-2">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        {comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : 'Unknown time'}
                       </span>
                       {comment.updated_at !== comment.created_at && (
                         <span className="text-sm text-muted-foreground ml-2">(edited)</span>

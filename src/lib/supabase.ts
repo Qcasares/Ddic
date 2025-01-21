@@ -21,7 +21,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 });
 
 // Function to help diagnose schema issues
-export const checkSupabaseTableSchema = async (tableName: string) => {
+export const checkSupabaseTableSchema = async (tableName: keyof Database['public']['Tables']) => {
   try {
     const { error } = await supabase
       .from(tableName)
