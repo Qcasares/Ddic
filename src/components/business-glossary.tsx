@@ -81,7 +81,7 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
           setTerms(data);
         }, {
           maxRetries: 2,
-          retryDelay: 500
+          baseDelay: 500
         });
       } finally {
         setIsLoading(false);
