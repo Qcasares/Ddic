@@ -27,25 +27,6 @@ export enum ErrorType {
 }
 
 /**
- * Error types for application-specific errors
- */
-export enum ErrorType {
-  VALIDATION = 'VALIDATION_ERROR',
-  NETWORK = 'NETWORK_ERROR',
-  AUTH = 'AUTH_ERROR',
-  DATABASE = 'DATABASE_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
-  PERMISSION = 'PERMISSION_ERROR',
-  WORKFLOW = 'WORKFLOW_ERROR',
-  TEAM = 'TEAM_ERROR',
-  RATE_LIMIT = 'RATE_LIMIT_ERROR',
-  SECURITY = 'SECURITY_ERROR',
-  CONFIG = 'CONFIG_ERROR',
-  RETRYABLE = 'RETRYABLE_ERROR',
-  UNKNOWN = 'UNKNOWN_ERROR'
-}
-
-/**
  * Error context type
  */
 interface ErrorContext {

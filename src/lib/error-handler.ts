@@ -75,8 +75,10 @@ function createRateLimitedRetry() {
   
   return async function rateLimitedRetry(): Promise<never> {
     if (!rateLimiter.canRetry(retryKey)) {
-      throw new SecurityError(
-        ERROR_MESSAGES[ErrorType.RATE_LIMIT]
+      throw new AppError(
+        ERROR_MESSAGES[ErrorType.RATE_LIMIT],
+        ErrorType.RATE_LIMIT,
+        ErrorSeverity.WARNING
       );
     }
     
@@ -93,18 +95,19 @@ export function handleError(error: unknown): AppError {
 
   if (error instanceof Error) {
     // Handle Supabase errors
-    if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
-      if (error.code.startsWith('PGRST')) {
+    if (error instanceof Error && 'code' in error) {
+      const dbErrorCode = (error as {code: unknown}).code;
+      if (typeof dbErrorCode === 'string' && dbErrorCode.startsWith('PGRST')) {
         return new SecurityError(
           ERROR_MESSAGES[ErrorType.PERMISSION],
-          { code: error.code }
+          { code: dbErrorCode }
         );
       }
       return new AppError(
         ERROR_MESSAGES[ErrorType.DATABASE],
         ErrorType.DATABASE,
         ErrorSeverity.ERROR,
-        error.code
+        typeof dbErrorCode === 'string' ? dbErrorCode : undefined
       );
     }
 

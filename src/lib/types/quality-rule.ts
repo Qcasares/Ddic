@@ -4,15 +4,15 @@ export interface QualityRule {
   ruleType: string;
   name: string;
   description: string;
-  severity: string;
-  condition: string;
+  severity: 'info' | 'warning' | 'error';
+  condition: 'pattern' | 'maxLength' | 'minLength' | 'required' | 'enum';
   field: string;
   value?: string | number | string[];
   enabled: boolean;
-  configuration?: Record<string, unknown>;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: string;
+  configuration: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
 }
 
 export interface CreateQualityRule {

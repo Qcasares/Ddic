@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { useDictionaries } from '@/hooks/use-dictionaries'
 import { useDictionaryEntries } from '@/hooks/use-dictionary-entries'
 import { Card } from '@/components/ui/card'
@@ -13,7 +12,7 @@ interface DictionaryEntry {
   id: string;
   dictionary_id: string;
   field_name: string;
-  data_type: string;
+  data_type: 'string' | 'number' | 'boolean' | 'object' | 'date' | 'datetime' | 'array' | 'null';
   description: string | null;
   sample_values: any[];
   metadata: Record<string, any>;
@@ -22,17 +21,11 @@ interface DictionaryEntry {
   created_by: string;
 }
 
-export function DictionaryView() {
-  const { dictionaryId } = useParams<{ dictionaryId: string }>()
-  
-  // Return early if no dictionaryId is provided
-  if (!dictionaryId) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p>No dictionary selected</p>
-      </div>
-    )
-  }
+interface DictionaryViewProps {
+  dictionaryId: string;
+}
+
+export function DictionaryView({ dictionaryId }: DictionaryViewProps) {
 
   const { data: dictionaries = [], isLoading: isDictionaryLoading } = useDictionaries()
   const { data: entriesData, isLoading: isEntriesLoading } = useDictionaryEntries({
