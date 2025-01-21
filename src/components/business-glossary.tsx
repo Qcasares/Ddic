@@ -86,7 +86,7 @@ export function BusinessGlossary({ dictionaryId, onTermSelect }: BusinessGlossar
       } finally {
         setIsLoading(false);
       }
-    };
+    });
 
     fetchTerms();
   }, [dictionaryId, debouncedSearch, toast]);
